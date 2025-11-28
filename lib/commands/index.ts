@@ -7,7 +7,7 @@ import * as fs from '../filesystem';
 export type CommandHandler = (
   parsed: ParsedCommand,
   currentDir: string
-) => Promise<string> | string;
+) => Promise<string | string[]> | string | string[];
 
 const handlers: { [key: string]: CommandHandler } = {};
 
@@ -496,4 +496,15 @@ registerCommand('nano', async (parsed, currentDir) => {
 registerCommand('mc', async () => {
   return `Midnight Commander 4.8.31\n\nLeft Panel: /root\nRight Panel: /tmp\n\nUse arrow keys to navigate\nF3 - View file\nF4 - Edit file\nF5 - Copy\nF6 - Move\nF7 - Mkdir\nF8 - Delete\nF10 - Exit`;
 });
+
+// Import all command modules
+import './packages';
+import './network';
+import './processes';
+import './users';
+import './archive';
+import './text';
+import './system';
+import './files';
+import './misc';
 

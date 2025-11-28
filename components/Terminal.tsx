@@ -473,7 +473,43 @@ export default function Terminal({ onLogout }: TerminalProps) {
       try {
         const result = await handler(parsed, dir);
         if (result) {
-          setOutput(prev => [...prev, result]);
+          // Handle special markers
+          if (result === '__CLEAR__') {
+            setOutput([]);
+            setIsProcessing(false);
+            return;
+          }
+          
+          // Check if result is an array (for animated/multi-line output)
+          if (Array.isArray(result)) {
+            // Add lines with delay for animation effect
+            for (let i = 0; i < result.length; i++) {
+              const line = result[i];
+              // Check if line starts with animation marker
+              if (line.startsWith('__PROGRESS__')) {
+                // Update last line instead of adding new one
+                const actualLine = line.replace('__PROGRESS__', '');
+                setOutput(prev => {
+                  const newOutput = [...prev];
+                  newOutput[newOutput.length - 1] = actualLine;
+                  return newOutput;
+                });
+                await new Promise(resolve => setTimeout(resolve, 100));
+              } else if (line.startsWith('__DELAY__')) {
+                // Just wait
+                const delay = parseInt(line.replace('__DELAY__', '')) || 100;
+                await new Promise(resolve => setTimeout(resolve, delay));
+              } else {
+                setOutput(prev => [...prev, line]);
+                // Small delay between lines for realistic effect
+                if (i < result.length - 1) {
+                  await new Promise(resolve => setTimeout(resolve, 50));
+                }
+              }
+            }
+          } else {
+            setOutput(prev => [...prev, result]);
+          }
         }
         // Update directory if changed
         const newDir = getCurrentDir();

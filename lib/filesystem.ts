@@ -2,14 +2,19 @@
 // All operations stored in localStorage
 
 export interface FileNode {
-  type: 'file' | 'directory';
+  type: 'file' | 'directory' | 'symlink';
   name: string;
   content?: string;
   children?: { [key: string]: FileNode };
   permissions?: string;
   owner?: string;
+  group?: string;
   size?: number;
   modified?: number;
+  accessed?: number;
+  created?: number;
+  target?: string; // For symlinks
+  mode?: number; // Numeric permissions (e.g., 0755)
 }
 
 export interface FileSystem {
@@ -425,5 +430,166 @@ export function initializeFileSystem(): void {
     setFS(DEFAULT_FS);
     setDiskUsage(DEFAULT_DISK);
   }
+}
+
+// Create a symlink
+export function createSymlink(linkPath: string, targetPath: string, currentDir: string = '/root'): boolean {
+  const normalizedPath = normalizePath(linkPath, currentDir);
+  const parts = normalizedPath.split('/').filter(Boolean);
+  const linkName = parts.pop();
+  
+  if (!linkName) return false;
+  
+  const parentPath = '/' + parts.join('/');
+  const parent = getNodeAtPath(parentPath, '/');
+  
+  if (!parent || parent.type !== 'directory' || !parent.children) {
+    return false;
+  }
+  
+  const fs = getFS();
+  let current = fs['/'];
+  
+  for (const part of parts) {
+    if (!current.children) {
+      current.children = {};
+    }
+    if (!current.children[part]) {
+      return false;
+    }
+    current = current.children[part];
+  }
+  
+  if (!current.children) {
+    current.children = {};
+  }
+  
+  current.children[linkName] = {
+    type: 'symlink',
+    name: linkName,
+    target: targetPath,
+    permissions: 'lrwxrwxrwx',
+    owner: 'root',
+    group: 'root',
+    size: targetPath.length,
+    modified: Date.now(),
+  };
+  
+  setFS(fs);
+  return true;
+}
+
+// Update file permissions
+export function chmod(path: string, mode: string | number, currentDir: string = '/root'): boolean {
+  const normalizedPath = normalizePath(path, currentDir);
+  const parts = normalizedPath.split('/').filter(Boolean);
+  const nodeName = parts.pop();
+  
+  if (!nodeName) return false;
+  
+  const fs = getFS();
+  let current = fs['/'];
+  
+  for (const part of parts) {
+    if (!current.children) {
+      return false;
+    }
+    current = current.children[part];
+    if (!current) {
+      return false;
+    }
+  }
+  
+  if (!current.children || !current.children[nodeName]) {
+    return false;
+  }
+  
+  const node = current.children[nodeName];
+  
+  // Convert numeric mode to permission string
+  if (typeof mode === 'number') {
+    node.mode = mode;
+    const typeChar = node.type === 'directory' ? 'd' : node.type === 'symlink' ? 'l' : '-';
+    const perms = [
+      (mode & 0o400) ? 'r' : '-',
+      (mode & 0o200) ? 'w' : '-',
+      (mode & 0o100) ? 'x' : '-',
+      (mode & 0o040) ? 'r' : '-',
+      (mode & 0o020) ? 'w' : '-',
+      (mode & 0o010) ? 'x' : '-',
+      (mode & 0o004) ? 'r' : '-',
+      (mode & 0o002) ? 'w' : '-',
+      (mode & 0o001) ? 'x' : '-',
+    ];
+    node.permissions = typeChar + perms.join('');
+  } else {
+    node.permissions = mode;
+  }
+  
+  setFS(fs);
+  return true;
+}
+
+// Update file owner
+export function chown(path: string, owner: string, group?: string, currentDir: string = '/root'): boolean {
+  const normalizedPath = normalizePath(path, currentDir);
+  const parts = normalizedPath.split('/').filter(Boolean);
+  const nodeName = parts.pop();
+  
+  if (!nodeName) return false;
+  
+  const fs = getFS();
+  let current = fs['/'];
+  
+  for (const part of parts) {
+    if (!current.children) {
+      return false;
+    }
+    current = current.children[part];
+    if (!current) {
+      return false;
+    }
+  }
+  
+  if (!current.children || !current.children[nodeName]) {
+    return false;
+  }
+  
+  const node = current.children[nodeName];
+  node.owner = owner;
+  if (group) {
+    node.group = group;
+  }
+  
+  setFS(fs);
+  return true;
+}
+
+// Get symlink target
+export function readSymlink(path: string, currentDir: string = '/root'): string | null {
+  const node = getNodeAtPath(path, currentDir);
+  if (!node || node.type !== 'symlink') {
+    return null;
+  }
+  return node.target || null;
+}
+
+// Resolve symlink to actual path
+export function resolveSymlink(path: string, currentDir: string = '/root', maxDepth: number = 10): string | null {
+  if (maxDepth <= 0) return null; // Prevent infinite loops
+  
+  const node = getNodeAtPath(path, currentDir);
+  if (!node) return null;
+  
+  if (node.type !== 'symlink') {
+    return normalizePath(path, currentDir);
+  }
+  
+  const target = node.target;
+  if (!target) return null;
+  
+  // Resolve relative to symlink's directory
+  const linkDir = normalizePath(path, currentDir).split('/').slice(0, -1).join('/') || '/';
+  return resolveSymlink(target, linkDir, maxDepth - 1);
 }
 
