@@ -799,7 +799,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
           // Track failed command
           const newCount = addFailedCommand(parsed.command);
           setFailedCommandCount(newCount);
-          setOutput(prev => [...prev, `${parsed.command}: command not found. Type 'help' for available commands.`]);
+          setOutput(prev => [...prev, `${parsed.command}: command not found. Type 'agq' to activate Quantum Agent.`]);
           
           // Show AGQ prompt after 3 failed commands (only once)
           if (newCount >= 3 && !agqPromptShown) {
@@ -814,7 +814,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
         // Track failed command
         const newCount = addFailedCommand(parsed.command);
         setFailedCommandCount(newCount);
-        setOutput(prev => [...prev, `${parsed.command}: command not found. Type 'help' for available commands.`]);
+        setOutput(prev => [...prev, `${parsed.command}: command not found. Type 'agq' to activate Quantum Agent.`]);
         
         // Show AGQ prompt after 3 failed commands (only once)
         if (newCount >= 3 && !agqPromptShown) {
