@@ -13,7 +13,8 @@ interface LoginPageProps {
   onLogin?: () => void;
 }
 
-export default function LoginPage({ onLogin }: LoginPageProps = {}) {
+export default function LoginPage(props?: LoginPageProps) {
+  const { onLogin } = props || {};
   const [password, setPassword] = useState('');
   const [attempts, setAttempts] = useState(0);
   const [output, setOutput] = useState<string[]>([]);
