@@ -146,7 +146,8 @@ export async function POST(request: NextRequest) {
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
-    const modelName = process.env.GEMINI_MODEL || 'gemini-3-pro-preview';
+    // Use gemini-2.0-flash-exp for agent (fast, capable)
+    const modelName = process.env.GEMINI_AGENT_MODEL || 'gemini-2.0-flash-exp';
     const model = genAI.getGenerativeModel({ model: modelName });
     
     // Build conversation history

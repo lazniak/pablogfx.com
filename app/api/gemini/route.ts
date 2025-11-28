@@ -20,8 +20,8 @@ export async function POST(request: NextRequest) {
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Use gemini-1.5-flash-latest or gemini-pro as fallback
-    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash-latest';
+    // Use gemini-2.0-flash-exp (latest) or gemini-1.5-flash as fallback
+    const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp';
     const model = genAI.getGenerativeModel({ model: modelName });
     
     const prompt = `You are a realistic Ubuntu Linux terminal. A user has executed a command and you need to provide a realistic terminal response.
