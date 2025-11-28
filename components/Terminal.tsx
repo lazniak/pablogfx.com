@@ -13,6 +13,8 @@ import {
   addAgentMessage,
   saveAgent,
   getLastLogin,
+  addToTerminalSession,
+  getSessionSummary,
   type Agent
 } from '@/lib/storage';
 import { initializeFileSystem, getNodeAtPath } from '@/lib/filesystem';
@@ -122,6 +124,9 @@ export default function Terminal({ onLogout }: TerminalProps) {
     // Update output with command
     const displayDir = dir === '/home/user' || dir === '/root' ? '~' : dir;
     setOutput(prev => [...prev, `root@prod-srv-42:${displayDir}# ${cmd}`]);
+    
+    // Log command to session for agent context
+    addToTerminalSession('command', cmd);
 
     // Handle special commands
     if (parsed.command === 'exit' || parsed.command === 'logout') {
@@ -200,6 +205,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
         try {
           const agent = getAgent(activeAgent);
           const history = agent?.messages || [];
+          const sessionSummary = getSessionSummary();
           
           const response = await fetch('/api/agent', {
             method: 'POST',
@@ -208,6 +214,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
               agentId: activeAgent,
               message,
               history: history.slice(-10),
+              terminalSession: sessionSummary,
             }),
           });
           

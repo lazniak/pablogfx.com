@@ -18,6 +18,7 @@ export interface StorageKeys {
   sessionActive: string;
   lastLogin: string;
   lastLoginIP: string;
+  terminalSession: string;
 }
 
 export const STORAGE_KEYS: StorageKeys = {
@@ -37,6 +38,7 @@ export const STORAGE_KEYS: StorageKeys = {
   sessionActive: 'terminal_session_active',
   lastLogin: 'terminal_last_login',
   lastLoginIP: 'terminal_last_login_ip',
+  terminalSession: 'terminal_session_log',
 };
 
 export function getStorageItem(key: string): string | null {
@@ -447,5 +449,53 @@ export function saveCurrentLoginTime(): void {
   
   setStorageItem(STORAGE_KEYS.lastLogin, formatted);
   setStorageItem(STORAGE_KEYS.lastLoginIP, ip);
+}
+
+// Terminal session log for agent context
+export interface SessionEntry {
+  timestamp: number;
+  type: 'command' | 'output' | 'agent';
+  content: string;
+}
+
+const MAX_SESSION_ENTRIES = 100;
+
+export function getTerminalSession(): SessionEntry[] {
+  const stored = getStorageItem(STORAGE_KEYS.terminalSession);
+  if (!stored) return [];
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return [];
+  }
+}
+
+export function addToTerminalSession(type: 'command' | 'output' | 'agent', content: string): void {
+  const session = getTerminalSession();
+  session.push({
+    timestamp: Date.now(),
+    type,
+    content: content.substring(0, 500) // Limit entry size
+  });
+  
+  // Keep only last N entries
+  const trimmed = session.slice(-MAX_SESSION_ENTRIES);
+  setStorageItem(STORAGE_KEYS.terminalSession, JSON.stringify(trimmed));
+}
+
+export function getSessionSummary(): string {
+  const session = getTerminalSession();
+  if (session.length === 0) return 'No session history.';
+  
+  // Get last 20 entries for summary
+  const recent = session.slice(-20);
+  return recent.map(entry => {
+    const prefix = entry.type === 'command' ? '$ ' : entry.type === 'agent' ? '[Agent] ' : '';
+    return `${prefix}${entry.content}`;
+  }).join('\n');
+}
+
+export function clearTerminalSession(): void {
+  removeStorageItem(STORAGE_KEYS.terminalSession);
 }
 

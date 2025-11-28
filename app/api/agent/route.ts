@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     message = body.message || '';
-    const { agentId, history } = body;
+    const { agentId, history, terminalSession } = body;
     
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -163,6 +163,12 @@ export async function POST(request: NextRequest) {
     prompt += `- If level 20-50: Be mysterious but drop some hints. Reveal basic concepts.\n`;
     prompt += `- If level 50-80: Be more open but still cautious. Reveal intermediate details.\n`;
     prompt += `- If level > 80: You can be more direct but maintain mystery. Reveal advanced concepts.\n\n`;
+    
+    // Include terminal session context
+    if (terminalSession) {
+      prompt += `TERMINAL SESSION CONTEXT (user's recent activity):\n${terminalSession}\n\n`;
+      prompt += `You can reference what the user has been doing in the terminal to make your responses more contextual.\n\n`;
+    }
     
     if (conversationHistory.length > 0) {
       prompt += 'Previous conversation:\n';

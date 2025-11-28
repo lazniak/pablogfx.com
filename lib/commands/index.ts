@@ -371,11 +371,63 @@ registerCommand('top', async () => {
 
 registerCommand('wget', async (parsed) => {
   if (parsed.args.length === 0) {
-    return 'wget: missing URL';
+    return 'wget: missing URL\nUsage: wget [OPTION]... [URL]...\n\nTry \'wget --help\' for more options.';
   }
   
   const url = parsed.args[0];
-  return `--2024-01-01 12:00:00--  ${url}\nResolving ${url}... 192.168.1.100\nConnecting to ${url}|192.168.1.100|:80... connected.\nHTTP request sent, awaiting response... 200 OK\nLength: 1024 (1.0K) [application/octet-stream]\nSaving to: '${url.split('/').pop() || 'file'}'\n\n100%[======================================>] 1,024      --.-K/s   in 0.001s\n\n2024-01-01 12:00:00 (1.2 MB/s) - '${url.split('/').pop() || 'file'}' saved [1024/1024]\n`;
+  const now = new Date();
+  const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  
+  // Validate URL format
+  let hostname: string;
+  let protocol = 'http';
+  try {
+    // Handle URLs without protocol
+    const urlWithProtocol = url.startsWith('http') ? url : `http://${url}`;
+    const parsed = new URL(urlWithProtocol);
+    hostname = parsed.hostname;
+    protocol = parsed.protocol.replace(':', '');
+  } catch {
+    return `wget: invalid URL '${url}'\nUsage: wget [URL]`;
+  }
+  
+  // Check for known/valid-looking domains
+  const validTLDs = ['com', 'org', 'net', 'io', 'pl', 'edu', 'gov', 'co', 'de', 'uk', 'fr', 'ru', 'jp', 'cn'];
+  const parts = hostname.split('.');
+  const tld = parts[parts.length - 1];
+  
+  if (!validTLDs.includes(tld) && tld.length > 3) {
+    return `--${timestamp}--  ${protocol}://${hostname}/\nResolving ${hostname} (${hostname})... failed: Name or service not known.\nwget: unable to resolve host address '${hostname}'`;
+  }
+  
+  // Simulate DNS resolution failure for random domains
+  if (hostname.length > 20 || /[^a-z0-9.-]/i.test(hostname)) {
+    return `--${timestamp}--  ${protocol}://${hostname}/\nResolving ${hostname} (${hostname})... failed: Name or service not known.\nwget: unable to resolve host address '${hostname}'`;
+  }
+  
+  // Random IP for successful lookups
+  const ip = `${Math.floor(Math.random() * 200) + 20}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+  const filename = url.split('/').pop()?.split('?')[0] || 'index.html';
+  const port = protocol === 'https' ? 443 : 80;
+  
+  // Randomly decide if connection succeeds or fails
+  if (Math.random() < 0.15) {
+    return `--${timestamp}--  ${protocol}://${hostname}/\nResolving ${hostname} (${hostname})... ${ip}\nConnecting to ${hostname} (${hostname})|${ip}|:${port}... failed: Connection refused.`;
+  }
+  
+  const size = Math.floor(Math.random() * 50000) + 1000;
+  const speed = (Math.random() * 5 + 0.5).toFixed(2);
+  
+  return `--${timestamp}--  ${protocol}://${hostname}/${filename}
+Resolving ${hostname} (${hostname})... ${ip}
+Connecting to ${hostname} (${hostname})|${ip}|:${port}... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: ${size} (${(size/1024).toFixed(1)}K) [${filename.endsWith('.html') ? 'text/html' : 'application/octet-stream'}]
+Saving to: '${filename}'
+
+${filename.substring(0,20).padEnd(20)} 100%[===================>] ${(size/1024).toFixed(2)}K  ${speed}MB/s    in ${(size/1024/parseFloat(speed)/1024).toFixed(3)}s
+
+${timestamp} (${speed} MB/s) - '${filename}' saved [${size}/${size}]`;
 });
 
 registerCommand('curl', async (parsed) => {
@@ -384,7 +436,63 @@ registerCommand('curl', async (parsed) => {
   }
   
   const url = parsed.args[0];
-  return `<html><body>Response from ${url}</body></html>`;
+  const verbose = parsed.flags['v'] || parsed.flags['verbose'];
+  const head = parsed.flags['I'] || parsed.flags['head'];
+  
+  // Parse URL
+  let hostname: string;
+  let protocol = 'http';
+  try {
+    const urlWithProtocol = url.startsWith('http') ? url : `http://${url}`;
+    const parsed = new URL(urlWithProtocol);
+    hostname = parsed.hostname;
+    protocol = parsed.protocol.replace(':', '');
+  } catch {
+    return `curl: (3) URL rejected: Malformed input to a URL function`;
+  }
+  
+  // Check for invalid domains
+  const validTLDs = ['com', 'org', 'net', 'io', 'pl', 'edu', 'gov', 'co', 'de', 'uk', 'fr', 'ru', 'jp', 'cn'];
+  const parts = hostname.split('.');
+  const tld = parts[parts.length - 1];
+  
+  if (!validTLDs.includes(tld) && tld.length > 3) {
+    return `curl: (6) Could not resolve host: ${hostname}`;
+  }
+  
+  const ip = `${Math.floor(Math.random() * 200) + 20}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+  
+  if (head) {
+    return `HTTP/1.1 200 OK
+Date: ${new Date().toUTCString()}
+Server: nginx/1.24.0
+Content-Type: text/html; charset=UTF-8
+Content-Length: ${Math.floor(Math.random() * 50000) + 1000}
+Connection: keep-alive
+Cache-Control: max-age=3600`;
+  }
+  
+  if (verbose) {
+    return `*   Trying ${ip}:${protocol === 'https' ? 443 : 80}...
+* Connected to ${hostname} (${ip}) port ${protocol === 'https' ? 443 : 80}
+> GET / HTTP/1.1
+> Host: ${hostname}
+> User-Agent: curl/8.5.0
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+< Server: nginx
+< Content-Type: text/html
+<
+<!DOCTYPE html>
+<html><head><title>${hostname}</title></head>
+<body><h1>Welcome to ${hostname}</h1></body></html>
+* Connection #0 to host ${hostname} left intact`;
+  }
+  
+  return `<!DOCTYPE html>
+<html><head><title>${hostname}</title></head>
+<body><h1>Welcome to ${hostname}</h1></body></html>`;
 });
 
 registerCommand('pip', async (parsed, currentDir) => {
