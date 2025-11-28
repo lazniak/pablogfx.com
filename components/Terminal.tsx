@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { parseCommand } from '@/lib/commandParser';
-import { getCommandHandler } from '@/lib/commands';
+import { getCommandHandler, getAllCommands } from '@/lib/commands';
 import { 
   getCurrentDir, 
   setCurrentDir, 
@@ -443,25 +443,67 @@ export default function Terminal({ onLogout }: TerminalProps) {
 
 
     if (parsed.command === 'help') {
-      setOutput(prev => [...prev, 
-        'Available commands:',
-        '  ls, cd, pwd, cat, echo, whoami, hostname, date',
-        '  touch, mkdir, rm, rmdir, cp, mv, chmod, chown',
-        '  grep, find, ps, top, df, du, free, uname',
-        '  vim, nano, mc (Midnight Commander)',
-        '  pip install <package>',
-        '  wget, curl',
-        '  hackit (use hackit -h for help)',
-        '  agent <number> - Connect to AI agent',
-        '  clear, exit, help',
+      const allCmds = getAllCommands().sort();
+      
+      // Group commands by category
+      const categories: { [key: string]: string[] } = {
+        'File Operations': ['ls', 'cd', 'pwd', 'cat', 'echo', 'touch', 'mkdir', 'rm', 'rmdir', 'cp', 'mv', 'ln', 'stat', 'file', 'tree', 'find', 'locate', 'updatedb', 'basename', 'dirname', 'realpath', 'readlink'],
+        'Text Processing': ['head', 'tail', 'grep', 'sed', 'awk', 'cut', 'sort', 'uniq', 'wc', 'tr', 'diff', 'comm', 'paste', 'less', 'more'],
+        'File Permissions': ['chmod', 'chown', 'chgrp'],
+        'System Info': ['uname', 'hostname', 'uptime', 'date', 'cal', 'whoami', 'id', 'groups', 'w', 'who', 'last', 'df', 'du', 'free', 'lscpu', 'lsblk', 'lsusb', 'lspci', 'dmidecode'],
+        'Process Management': ['ps', 'top', 'htop', 'kill', 'killall', 'pkill', 'pgrep', 'pstree', 'nice', 'renice', 'nohup', 'bg', 'fg', 'jobs', 'lsof'],
+        'Package Management': ['apt', 'apt-get', 'apt-cache', 'dpkg', 'pip', 'pip3', 'npm', 'yarn'],
+        'Network': ['ifconfig', 'ip', 'ping', 'traceroute', 'netstat', 'ss', 'nslookup', 'dig', 'host', 'wget', 'curl', 'ssh', 'scp', 'rsync', 'nc', 'nmap', 'arp', 'route'],
+        'User Management': ['useradd', 'userdel', 'usermod', 'groupadd', 'groupdel', 'passwd', 'su', 'sudo'],
+        'Archive & Compression': ['tar', 'gzip', 'gunzip', 'zip', 'unzip', 'bzip2', 'bunzip2', 'xz', 'unxz', '7z', 'rar', 'unrar'],
+        'System Services': ['systemctl', 'service', 'shutdown', 'reboot', 'dmesg', 'journalctl'],
+        'Editors': ['vim', 'nano', 'mc'],
+        'Shell & Environment': ['clear', 'history', 'alias', 'export', 'env', 'printenv', 'which', 'whereis', 'man', 'apropos'],
+        'Misc Tools': ['time', 'watch', 'xargs', 'tee', 'dd', 'seq', 'md5sum', 'sha256sum'],
+        'Security Tools': ['hackit', 'nmap'],
+      };
+      
+      const helpLines: string[] = [
         '',
-        'QuantumStreaming controls:',
-        '  play, pause, mute, restart, reboot',
-        '  seek <seconds>, forward [seconds], backward [seconds]',
-        '  volume [0-1], brightness [0-100%], censor [0-100%]',
+        '\x1b[1;32m╔══════════════════════════════════════════════════════════════════════╗\x1b[0m',
+        '\x1b[1;32m║                    AVAILABLE COMMANDS                                ║\x1b[0m',
+        '\x1b[1;32m╚══════════════════════════════════════════════════════════════════════╝\x1b[0m',
         '',
-        'Use arrow keys for command history.',
-      ]);
+      ];
+      
+      for (const [category, cmds] of Object.entries(categories)) {
+        const availableCmds = cmds.filter(cmd => allCmds.includes(cmd));
+        if (availableCmds.length > 0) {
+          helpLines.push(`\x1b[1;33m${category}:\x1b[0m`);
+          helpLines.push(`  ${availableCmds.join(', ')}`);
+          helpLines.push('');
+        }
+      }
+      
+      // Find commands not in any category
+      const categorizedCmds = Object.values(categories).flat();
+      const uncategorized = allCmds.filter(cmd => !categorizedCmds.includes(cmd));
+      if (uncategorized.length > 0) {
+        helpLines.push('\x1b[1;33mOther:\x1b[0m');
+        helpLines.push(`  ${uncategorized.join(', ')}`);
+        helpLines.push('');
+      }
+      
+      helpLines.push('\x1b[1;36mSpecial Commands:\x1b[0m');
+      helpLines.push('  agent <number>  - Connect to AI temporal agent');
+      helpLines.push('  exit            - Disconnect from agent or close session');
+      helpLines.push('  help            - Show this help message');
+      helpLines.push('');
+      helpLines.push('\x1b[1;36mQuantumStreaming Controls:\x1b[0m');
+      helpLines.push('  play, pause, mute, restart, reboot');
+      helpLines.push('  seek <seconds>, forward [seconds], backward [seconds]');
+      helpLines.push('  volume [0-1], brightness [0-100%], censor [0-100%]');
+      helpLines.push('');
+      helpLines.push('\x1b[1;90mTip: Use arrow keys for command history. Most commands support --help flag.\x1b[0m');
+      helpLines.push(`\x1b[1;90mTotal commands available: ${allCmds.length}\x1b[0m`);
+      helpLines.push('');
+      
+      setOutput(prev => [...prev, ...helpLines]);
       setIsProcessing(false);
       return;
     }
