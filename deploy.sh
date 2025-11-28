@@ -81,7 +81,15 @@ server {
         proxy_read_timeout 60s;
     }
 
-    # Static files (if needed)
+    # Static files from public directory
+    location ~* \.(mp4|mov|avi|webm|json|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot|css|js)$ {
+        root /var/www/pablogfx.com/public;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    # Next.js static files
     location /_next/static {
         alias /var/www/pablogfx.com/.next/static;
         expires 365d;
