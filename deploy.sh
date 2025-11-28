@@ -63,18 +63,32 @@ server {
     # Root directory
     root /var/www/pablogfx.com;
 
-    # Static files from public directory (MUST be before proxy_pass)
-    location ~* ^/(background\.mp4|background\.json|.*\.(jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot|css|js|mp4|mov|avi|webm))$ {
+    # Serve background.mp4 directly from public directory
+    location = /background.mp4 {
+        root /var/www/pablogfx.com/public;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+    }
+
+    # Serve background.json directly from public directory
+    location = /background.json {
+        root /var/www/pablogfx.com/public;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    # Other static files from public directory
+    location ~* \.(jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot|css|js|mov|avi|webm)$ {
         root /var/www/pablogfx.com/public;
         try_files $uri =404;
         expires 30d;
         add_header Cache-Control "public, immutable";
         access_log off;
-        
-        # For large video files
-        sendfile on;
-        tcp_nopush on;
-        tcp_nodelay on;
     }
 
     # Next.js static files
