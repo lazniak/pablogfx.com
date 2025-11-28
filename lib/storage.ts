@@ -19,6 +19,9 @@ export interface StorageKeys {
   lastLogin: string;
   lastLoginIP: string;
   terminalSession: string;
+  agqContext: string;
+  agqConversation: string;
+  failedCommands: string;
 }
 
 export const STORAGE_KEYS: StorageKeys = {
@@ -39,6 +42,9 @@ export const STORAGE_KEYS: StorageKeys = {
   lastLogin: 'terminal_last_login',
   lastLoginIP: 'terminal_last_login_ip',
   terminalSession: 'terminal_session_log',
+  agqContext: 'agq_context',
+  agqConversation: 'agq_conversation',
+  failedCommands: 'terminal_failed_commands',
 };
 
 export function getStorageItem(key: string): string | null {
@@ -497,5 +503,109 @@ export function getSessionSummary(): string {
 
 export function clearTerminalSession(): void {
   removeStorageItem(STORAGE_KEYS.terminalSession);
+}
+
+// ============================================
+// AGQ-ASSISTANT Context Storage
+// ============================================
+
+export interface AGQContextData {
+  initiationLevel: number;
+  unlockedTopics: string[];
+  lastInteraction: number;
+  sessionCount: number;
+}
+
+export interface AGQConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+}
+
+const DEFAULT_AGQ_CONTEXT: AGQContextData = {
+  initiationLevel: 0,
+  unlockedTopics: [],
+  lastInteraction: 0,
+  sessionCount: 0,
+};
+
+export function getAGQContext(): AGQContextData {
+  const stored = getStorageItem(STORAGE_KEYS.agqContext);
+  if (!stored) return { ...DEFAULT_AGQ_CONTEXT };
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return { ...DEFAULT_AGQ_CONTEXT };
+  }
+}
+
+export function saveAGQContext(context: Partial<AGQContextData>): void {
+  const current = getAGQContext();
+  const updated = { ...current, ...context, lastInteraction: Date.now() };
+  setStorageItem(STORAGE_KEYS.agqContext, JSON.stringify(updated));
+}
+
+export function updateAGQInitiationLevel(level: number): void {
+  const context = getAGQContext();
+  context.initiationLevel = Math.max(0, Math.min(100, level));
+  saveAGQContext(context);
+}
+
+export function getAGQConversation(): AGQConversationMessage[] {
+  const stored = getStorageItem(STORAGE_KEYS.agqConversation);
+  if (!stored) return [];
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return [];
+  }
+}
+
+export function addAGQMessage(role: 'user' | 'assistant', content: string): void {
+  const conversation = getAGQConversation();
+  conversation.push({
+    role,
+    content: content.substring(0, 1000), // Limit message size
+    timestamp: Date.now(),
+  });
+  
+  // Keep last 50 messages
+  const trimmed = conversation.slice(-50);
+  setStorageItem(STORAGE_KEYS.agqConversation, JSON.stringify(trimmed));
+}
+
+export function clearAGQConversation(): void {
+  removeStorageItem(STORAGE_KEYS.agqConversation);
+}
+
+export function incrementAGQSessionCount(): number {
+  const context = getAGQContext();
+  context.sessionCount = (context.sessionCount || 0) + 1;
+  saveAGQContext(context);
+  return context.sessionCount;
+}
+
+// Failed commands tracking for AGQ activation
+export function getFailedCommands(): string[] {
+  const stored = getStorageItem(STORAGE_KEYS.failedCommands);
+  if (!stored) return [];
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return [];
+  }
+}
+
+export function addFailedCommand(command: string): number {
+  const failed = getFailedCommands();
+  failed.push(command);
+  // Keep last 10
+  const trimmed = failed.slice(-10);
+  setStorageItem(STORAGE_KEYS.failedCommands, JSON.stringify(trimmed));
+  return trimmed.length;
+}
+
+export function clearFailedCommands(): void {
+  removeStorageItem(STORAGE_KEYS.failedCommands);
 }
 

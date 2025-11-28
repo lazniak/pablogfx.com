@@ -15,11 +15,23 @@ import {
   getLastLogin,
   addToTerminalSession,
   getSessionSummary,
+  getAGQContext,
+  saveAGQContext,
+  getAGQConversation,
+  addAGQMessage,
+  clearAGQConversation,
+  addFailedCommand,
+  clearFailedCommands,
+  getFailedCommands,
+  incrementAGQSessionCount,
   type Agent
 } from '@/lib/storage';
 import { initializeFileSystem, getNodeAtPath } from '@/lib/filesystem';
 import { detectUserLevel } from '@/lib/userLevel';
 import MidnightCommander from './MidnightCommander';
+import { renderSequence, createTerminalCallbacks } from '@/lib/agq-assistant/renderer';
+import { generateActivationPrompt, generateWelcomeSequence, generateExitSequence } from '@/lib/agq-assistant/prompts';
+import { AGQSequence } from '@/lib/agq-assistant/tools';
 
 interface TerminalProps {
   onLogout?: () => void;
@@ -36,11 +48,15 @@ export default function Terminal({ onLogout }: TerminalProps) {
   const [censor, setCensor] = useState(25); // 0-100% blur
   const [activeAgent, setActiveAgent] = useState<number | null>(null);
   const [mcMode, setMcMode] = useState(false);
+  const [agqMode, setAgqMode] = useState(false);
+  const [failedCommandCount, setFailedCommandCount] = useState(0);
+  const [agqPromptShown, setAgqPromptShown] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const history = useRef<string[]>([]);
   const videoStartedRef = useRef(false);
+  const abortSignalRef = useRef({ aborted: false });
 
   useEffect(() => {
     initializeFileSystem();
@@ -155,6 +171,138 @@ export default function Terminal({ onLogout }: TerminalProps) {
     // Launch Midnight Commander
     if (parsed.command === 'mc') {
       setMcMode(true);
+      setIsProcessing(false);
+      return;
+    }
+
+    // Handle AGQ-ASSISTANT activation
+    if (parsed.command === 'agq' || parsed.command === 'assistant') {
+      setAgqMode(true);
+      clearFailedCommands();
+      setFailedCommandCount(0);
+      setAgqPromptShown(false);
+      incrementAGQSessionCount();
+      
+      // Run welcome sequence
+      const context = getAGQContext();
+      const welcomeSeq = generateWelcomeSequence(context.initiationLevel);
+      
+      const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current);
+      abortSignalRef.current.aborted = false;
+      
+      (async () => {
+        await renderSequence(welcomeSeq, callbacks);
+        // Increase initiation level slightly
+        saveAGQContext({ initiationLevel: Math.min(context.initiationLevel + 5, 100) });
+        setIsProcessing(false);
+      })();
+      return;
+    }
+
+    // If in AGQ mode, handle messages to assistant
+    if (agqMode) {
+      const message = cmd.trim().toLowerCase();
+      
+      // Handle exit commands
+      if (message === 'exit' || message === 'quit' || message === 'bye') {
+        const exitSeq = generateExitSequence();
+        const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current);
+        abortSignalRef.current.aborted = false;
+        
+        (async () => {
+          await renderSequence(exitSeq, callbacks);
+          setAgqMode(false);
+          setIsProcessing(false);
+        })();
+        return;
+      }
+      
+      // Handle clear
+      if (message === 'clear') {
+        setOutput([]);
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Send message to AGQ API
+      if (cmd.trim()) {
+        addAGQMessage('user', cmd.trim());
+        setOutput(prev => [...prev, `agq> ${cmd.trim()}`]);
+        
+        // Show loading animation
+        const spinners = ['◐', '◓', '◑', '◒'];
+        let spinIdx = 0;
+        const loadingMsgs = [
+          'Quantum bridge synchronizing...',
+          'Traversing temporal nodes...',
+          'Decrypting response matrix...',
+          'Calibrating neural interface...',
+        ];
+        let msgIdx = 0;
+        
+        setOutput(prev => [...prev, `${spinners[0]} ${loadingMsgs[0]}`]);
+        
+        const loadingInterval = setInterval(() => {
+          spinIdx = (spinIdx + 1) % spinners.length;
+          if (spinIdx === 0) msgIdx = (msgIdx + 1) % loadingMsgs.length;
+          setOutput(prev => {
+            const newOut = [...prev];
+            newOut[newOut.length - 1] = `${spinners[spinIdx]} ${loadingMsgs[msgIdx]}`;
+            return newOut;
+          });
+        }, 100);
+        
+        try {
+          const context = getAGQContext();
+          const response = await fetch('/api/agq', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: cmd.trim(),
+              action: 'message',
+              context: {
+                failedCommands: getFailedCommands(),
+                sessionHistory: getSessionSummary(),
+                conversationHistory: getAGQConversation().slice(-10),
+                initiationLevel: context.initiationLevel,
+              }
+            })
+          });
+          
+          clearInterval(loadingInterval);
+          // Remove loading line
+          setOutput(prev => prev.slice(0, -1));
+          
+          const data = await response.json();
+          
+          if (data.sequence) {
+            const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current);
+            abortSignalRef.current.aborted = false;
+            await renderSequence(data.sequence, callbacks);
+            
+            // Store assistant response
+            const responseText = data.sequence.steps
+              .filter((s: { tool: string }) => s.tool === 'text')
+              .map((s: { content?: string }) => s.content || '')
+              .join(' ');
+            if (responseText) {
+              addAGQMessage('assistant', responseText);
+            }
+            
+            // Update context if provided
+            if (data.stateUpdate) {
+              saveAGQContext(data.stateUpdate);
+            }
+          }
+        } catch (error) {
+          clearInterval(loadingInterval);
+          setOutput(prev => [...prev.slice(0, -1), '[AGQ-16.7.9v] Quantum interference detected. Please retry.']);
+        }
+        
+        setIsProcessing(false);
+        return;
+      }
+      
       setIsProcessing(false);
       return;
     }
@@ -648,15 +796,39 @@ export default function Terminal({ onLogout }: TerminalProps) {
         if (data.output) {
           setOutput(prev => [...prev, data.output]);
         } else {
+          // Track failed command
+          const newCount = addFailedCommand(parsed.command);
+          setFailedCommandCount(newCount);
           setOutput(prev => [...prev, `${parsed.command}: command not found. Type 'help' for available commands.`]);
+          
+          // Show AGQ prompt after 3 failed commands (only once)
+          if (newCount >= 3 && !agqPromptShown) {
+            setAgqPromptShown(true);
+            const promptSeq = generateActivationPrompt(newCount);
+            const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current);
+            abortSignalRef.current.aborted = false;
+            await renderSequence(promptSeq, callbacks);
+          }
         }
       } catch (error: any) {
+        // Track failed command
+        const newCount = addFailedCommand(parsed.command);
+        setFailedCommandCount(newCount);
         setOutput(prev => [...prev, `${parsed.command}: command not found. Type 'help' for available commands.`]);
+        
+        // Show AGQ prompt after 3 failed commands (only once)
+        if (newCount >= 3 && !agqPromptShown) {
+          setAgqPromptShown(true);
+          const promptSeq = generateActivationPrompt(newCount);
+          const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current);
+          abortSignalRef.current.aborted = false;
+          await renderSequence(promptSeq, callbacks);
+        }
       }
     }
 
     setIsProcessing(false);
-  }, [onLogout, activeAgent, currentDir, censor, brightness]);
+  }, [onLogout, activeAgent, currentDir, censor, brightness, agqPromptShown, agqMode]);
 
   const startVideo = useCallback(() => {
     const video = videoRef.current;
@@ -728,6 +900,26 @@ export default function Terminal({ onLogout }: TerminalProps) {
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     startVideo(); // Start video on any key press
     
+    // CTRL+C - Abort current sequence/process
+    if (e.ctrlKey && e.key === 'c') {
+      e.preventDefault();
+      abortSignalRef.current.aborted = true;
+      
+      if (isProcessing) {
+        setOutput(prev => [...prev, '^C']);
+        setIsProcessing(false);
+      } else if (agqMode) {
+        // Exit AGQ mode on CTRL+C
+        setOutput(prev => [...prev, '^C', '[AGQ-16.7.9v] Connection interrupted.']);
+        setAgqMode(false);
+      } else if (input) {
+        // Clear current input
+        setOutput(prev => [...prev, `root@prod-srv-42:${getCurrentDir()}# ${input}`, '^C']);
+        setInput('');
+      }
+      return;
+    }
+    
     if (e.key === 'Tab') {
       e.preventDefault();
       
@@ -787,7 +979,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
         setInput('');
       }
     }
-  }, [input, historyIndex, executeCommand, startVideo, getCompletions]);
+  }, [input, historyIndex, executeCommand, startVideo, getCompletions, agqMode, isProcessing]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
@@ -873,7 +1065,13 @@ export default function Terminal({ onLogout }: TerminalProps) {
         {!isProcessing && (
           <div className="terminal-input-line">
             <span className="terminal-prompt">
-              <span className="prompt-user">root</span>@<span className="prompt-host">prod-srv-42</span>:<span className="prompt-dir">{displayDir}</span>#
+              {agqMode ? (
+                <span className="prompt-agq" style={{ color: '#c084fc' }}>agq&gt;</span>
+              ) : (
+                <>
+                  <span className="prompt-user">root</span>@<span className="prompt-host">prod-srv-42</span>:<span className="prompt-dir">{displayDir}</span>#
+                </>
+              )}
             </span>
             <input
               ref={inputRef}
