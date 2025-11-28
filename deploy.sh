@@ -147,10 +147,22 @@ if [ -d "/etc/letsencrypt/live/${DOMAIN}" ]; then
 else
     echo -e "${GREEN}Obtaining SSL certificate...${NC}"
     echo "Make sure DNS is pointing to this server before continuing!"
+    echo "This will create certificate for both ${DOMAIN} and www.${DOMAIN}"
     read -p "Press Enter to continue with SSL certificate generation..."
     
     # Certbot will automatically modify nginx config to add SSL
+    # Use --redirect to automatically redirect HTTP to HTTPS
     certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos --email admin@${DOMAIN} --redirect
+    
+    # Verify certificate was created correctly
+    if [ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ]; then
+        echo -e "${GREEN}SSL certificate created successfully${NC}"
+        # Check if certificate includes both domains
+        CERT_DOMAINS=$(openssl x509 -in /etc/letsencrypt/live/${DOMAIN}/fullchain.pem -text -noout | grep -oP 'DNS:\K[^,]*' | tr '\n' ' ')
+        echo "Certificate includes domains: $CERT_DOMAINS"
+    else
+        echo -e "${RED}SSL certificate creation may have failed${NC}"
+    fi
 fi
 
 # Setup PM2 for Next.js (if not already installed)
