@@ -10,6 +10,7 @@ export interface StorageKeys {
   packages: string;
   currentDir: string;
   attempts: string;
+  agents: string;
 }
 
 export const STORAGE_KEYS: StorageKeys = {
@@ -21,6 +22,7 @@ export const STORAGE_KEYS: StorageKeys = {
   packages: 'terminal_installed_packages',
   currentDir: 'terminal_current_dir',
   attempts: 'terminal_login_attempts',
+  agents: 'terminal_agents',
 };
 
 export function getStorageItem(key: string): string | null {
@@ -102,5 +104,51 @@ export function addInstalledPackage(pkg: string): void {
     packages.push(pkg);
     setStorageItem(STORAGE_KEYS.packages, JSON.stringify(packages));
   }
+}
+
+export interface AgentMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+}
+
+export interface Agent {
+  id: number;
+  messages: AgentMessage[];
+  createdAt: number;
+  initiationLevel?: number; // 0-100, measures how much the user knows
+}
+
+export function getAgents(): { [key: number]: Agent } {
+  const agents = getStorageItem(STORAGE_KEYS.agents);
+  return agents ? JSON.parse(agents) : {};
+}
+
+export function getAgent(id: number): Agent | null {
+  const agents = getAgents();
+  return agents[id] || null;
+}
+
+export function saveAgent(agent: Agent): void {
+  const agents = getAgents();
+  agents[agent.id] = agent;
+  setStorageItem(STORAGE_KEYS.agents, JSON.stringify(agents));
+}
+
+export function addAgentMessage(id: number, role: 'user' | 'assistant', content: string): void {
+  const agents = getAgents();
+  if (!agents[id]) {
+    agents[id] = {
+      id,
+      messages: [],
+      createdAt: Date.now(),
+    };
+  }
+  agents[id].messages.push({
+    role,
+    content,
+    timestamp: Date.now(),
+  });
+  setStorageItem(STORAGE_KEYS.agents, JSON.stringify(agents));
 }
 

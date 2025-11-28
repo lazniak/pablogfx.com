@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { 
   getStoredPassword, 
   getLoginAttempts, 
@@ -19,13 +18,12 @@ export default function LoginPage() {
   const [serverIP, setServerIP] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
   useEffect(() => {
     // Always show login page - don't auto-redirect
-    // Initialize attempts
-    const currentAttempts = getLoginAttempts();
-    setAttempts(currentAttempts);
+    // Reset attempts on page load (require password even if stored)
+    resetLoginAttempts();
+    setAttempts(0);
 
     // Generate random IP and store it
     const ip = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
@@ -63,7 +61,7 @@ export default function LoginPage() {
 
     setOutput(initialOutput);
     setIsFirstConnection(false);
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     if (outputRef.current) {
@@ -104,24 +102,43 @@ export default function LoginPage() {
     const currentAttempts = incrementLoginAttempts();
     setAttempts(currentAttempts);
 
-    // Check if password matches stored password (discovered password)
-    if (storedPassword && password === storedPassword) {
-      // Password matches - login successful
-      resetLoginAttempts();
-      setOutput(prev => [...prev, '']);
-      await new Promise(resolve => setTimeout(resolve, 300));
-      router.push('/terminal');
-      return;
+    // If password is stored, require exact match
+    if (storedPassword) {
+      if (password === storedPassword) {
+        // Password matches stored password - login successful
+        resetLoginAttempts();
+        setOutput(prev => [...prev, '']);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        // Login successful - page will detect it via localStorage check
+        return;
+      } else {
+        // Password doesn't match - show error
+        setOutput(prev => [
+          ...prev,
+          '',
+          'Permission denied, please try again.',
+          '',
+          `root@${serverIP}'s password: `,
+        ]);
+        setIsConnecting(false);
+        setPassword('');
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus();
+          }
+        }, 100);
+        return;
+      }
     }
 
-    // Always succeed on 3rd attempt - save the password as "discovered"
+    // No stored password - always succeed on 3rd attempt and save it
     if (currentAttempts >= 3) {
       // Save the password that user "discovered"
       setStoredPassword(password);
       resetLoginAttempts();
       setOutput(prev => [...prev, '']);
       await new Promise(resolve => setTimeout(resolve, 300));
-      router.push('/terminal');
+      window.location.href = '/';
       return;
     }
 
@@ -200,8 +217,8 @@ export default function LoginPage() {
           height: 100vh;
           background: #000000;
           color: #ffffff;
-          font-family: 'Ubuntu Mono', 'Courier New', monospace;
-          font-size: 14px;
+          font-family: 'VT323', monospace;
+          font-size: 28px;
           display: flex;
           flex-direction: column;
           overflow: hidden;
@@ -264,6 +281,12 @@ export default function LoginPage() {
         
         .terminal-output::-webkit-scrollbar-thumb:hover {
           background: #555;
+        }
+        
+        @media (max-width: 768px) {
+          .login-container {
+            font-size: 14px;
+          }
         }
       `}</style>
     </div>

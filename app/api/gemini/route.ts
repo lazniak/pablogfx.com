@@ -4,20 +4,24 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
+  let command = 'command';
   try {
-    const { command, context } = await request.json();
+    const body = await request.json();
+    command = body.command || 'command';
+    const { context } = body;
     
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
+      // Return realistic terminal error instead of exposing config
       return NextResponse.json(
-        { error: 'Gemini API key not configured' },
-        { status: 500 }
+        { output: `${command || 'command'}: command not found` },
+        { status: 200 }
       );
     }
     
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Try gemini-2.0-flash-exp first, fallback to gemini-1.5-flash
-    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    // Use gemini-1.5-flash-latest or gemini-pro as fallback
+    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash-latest';
     const model = genAI.getGenerativeModel({ model: modelName });
     
     const prompt = `You are a realistic Ubuntu Linux terminal. A user has executed a command and you need to provide a realistic terminal response.
@@ -53,9 +57,25 @@ Generate only the terminal output, nothing else:`;
     return NextResponse.json({ output: text });
   } catch (error: any) {
     console.error('Gemini API error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    
+    // Return a realistic terminal error message instead of exposing API errors
+    const errorMessage = error.message || 'Unknown error';
+    if (errorMessage.includes('API key') || errorMessage.includes('API_KEY')) {
+      return NextResponse.json(
+        { error: 'Command execution failed', details: 'Configuration error' },
+        { status: 500 }
+      );
+    }
+    
+    // For other errors, return a generic terminal error
     return NextResponse.json(
-      { error: 'Failed to generate response', details: error.message },
-      { status: 500 }
+      { output: `${command}: command not found` },
+      { status: 200 }
     );
   }
 }
