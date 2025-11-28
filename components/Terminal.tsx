@@ -14,7 +14,7 @@ import {
   saveAgent,
   type Agent
 } from '@/lib/storage';
-import { initializeFileSystem } from '@/lib/filesystem';
+import { initializeFileSystem, getNodeAtPath } from '@/lib/filesystem';
 import { detectUserLevel } from '@/lib/userLevel';
 
 interface TerminalProps {
@@ -609,8 +609,100 @@ export default function Terminal({ onLogout }: TerminalProps) {
     }
   }, []);
 
+  // Tab completion helper
+  const getCompletions = useCallback((inputText: string): { completions: string[], prefix: string, isCommand: boolean } => {
+    const parts = inputText.split(/\s+/);
+    const currentWord = parts[parts.length - 1] || '';
+    const isFirstWord = parts.length === 1 || (parts.length === 2 && inputText.endsWith(' ') === false && parts[0] !== '');
+    
+    // If first word, complete commands
+    if (isFirstWord && !inputText.includes(' ')) {
+      const allCmds = getAllCommands();
+      const matches = allCmds.filter(cmd => cmd.startsWith(currentWord));
+      return { completions: matches.sort(), prefix: currentWord, isCommand: true };
+    }
+    
+    // Otherwise, complete file/directory paths
+    const dir = getCurrentDir();
+    
+    // Parse the path
+    let searchDir = dir;
+    let searchPrefix = currentWord;
+    
+    if (currentWord.includes('/')) {
+      const lastSlash = currentWord.lastIndexOf('/');
+      const pathPart = currentWord.substring(0, lastSlash + 1);
+      searchPrefix = currentWord.substring(lastSlash + 1);
+      
+      // Resolve the directory path
+      if (pathPart.startsWith('/')) {
+        searchDir = pathPart;
+      } else {
+        searchDir = dir === '/' ? '/' + pathPart : dir + '/' + pathPart;
+      }
+      searchDir = searchDir.replace(/\/+/g, '/').replace(/\/$/, '') || '/';
+    }
+    
+    // Get files in the directory
+    const node = getNodeAtPath(searchDir, dir);
+    if (!node || node.type !== 'directory' || !node.children) {
+      return { completions: [], prefix: currentWord, isCommand: false };
+    }
+    
+    const matches = Object.keys(node.children)
+      .filter(name => name.startsWith(searchPrefix))
+      .sort()
+      .map(name => {
+        const child = node.children![name];
+        const suffix = child.type === 'directory' ? '/' : '';
+        if (currentWord.includes('/')) {
+          const lastSlash = currentWord.lastIndexOf('/');
+          return currentWord.substring(0, lastSlash + 1) + name + suffix;
+        }
+        return name + suffix;
+      });
+    
+    return { completions: matches, prefix: currentWord, isCommand: false };
+  }, []);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     startVideo(); // Start video on any key press
+    
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      
+      const { completions, prefix, isCommand } = getCompletions(input);
+      
+      if (completions.length === 0) {
+        // No completions - do nothing
+        return;
+      } else if (completions.length === 1) {
+        // Single match - complete it
+        const completion = completions[0];
+        const parts = input.split(/\s+/);
+        parts[parts.length - 1] = completion;
+        const newInput = parts.join(' ') + (isCommand || !completion.endsWith('/') ? ' ' : '');
+        setInput(newInput);
+      } else {
+        // Multiple matches - show them and complete common prefix
+        setOutput(prev => [...prev, `root@prod-srv-42:${getCurrentDir()}# ${input}`, completions.join('  ')]);
+        
+        // Find common prefix
+        let commonPrefix = completions[0];
+        for (const comp of completions) {
+          while (!comp.startsWith(commonPrefix) && commonPrefix.length > 0) {
+            commonPrefix = commonPrefix.slice(0, -1);
+          }
+        }
+        
+        if (commonPrefix.length > prefix.length) {
+          const parts = input.split(/\s+/);
+          parts[parts.length - 1] = commonPrefix;
+          setInput(parts.join(' '));
+        }
+      }
+      return;
+    }
     
     if (e.key === 'Enter') {
       executeCommand(input);
@@ -635,7 +727,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
         setInput('');
       }
     }
-  }, [input, historyIndex, executeCommand, startVideo]);
+  }, [input, historyIndex, executeCommand, startVideo, getCompletions]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
