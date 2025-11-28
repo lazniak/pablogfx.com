@@ -138,7 +138,20 @@ pm2 restart pablogfx.com
 
 ## Updating the Application
 
-To update the application after making changes:
+### Quick Update (Recommended)
+
+Use the update script:
+
+```bash
+cd /var/www/pablogfx.com
+git pull origin main
+chmod +x update.sh
+sudo bash update.sh
+```
+
+### Manual Update
+
+To update the application manually:
 
 ```bash
 cd /var/www/pablogfx.com
@@ -146,5 +159,6 @@ git pull origin main
 npm install
 npm run build
 pm2 restart pablogfx.com
+sudo systemctl reload nginx
 ```
 
