@@ -16,6 +16,8 @@ export interface StorageKeys {
   users: string;
   groups: string;
   sessionActive: string;
+  lastLogin: string;
+  lastLoginIP: string;
 }
 
 export const STORAGE_KEYS: StorageKeys = {
@@ -33,6 +35,8 @@ export const STORAGE_KEYS: StorageKeys = {
   users: 'terminal_users',
   groups: 'terminal_groups',
   sessionActive: 'terminal_session_active',
+  lastLogin: 'terminal_last_login',
+  lastLoginIP: 'terminal_last_login_ip',
 };
 
 export function getStorageItem(key: string): string | null {
@@ -400,5 +404,48 @@ export function clearAllData(): void {
   Object.values(STORAGE_KEYS).forEach(key => {
     removeStorageItem(key);
   });
+}
+
+// Last login management
+export interface LastLoginInfo {
+  timestamp: string;
+  ip: string;
+}
+
+// Default first login: April 16, 2049 16:16:16
+const DEFAULT_FIRST_LOGIN = 'Wed Apr 16 16:16:16 2049';
+const DEFAULT_FIRST_LOGIN_IP = '10.42.0.1';
+
+export function getLastLogin(): LastLoginInfo {
+  const storedTime = getStorageItem(STORAGE_KEYS.lastLogin);
+  const storedIP = getStorageItem(STORAGE_KEYS.lastLoginIP);
+  
+  if (storedTime && storedIP) {
+    return {
+      timestamp: storedTime,
+      ip: storedIP
+    };
+  }
+  
+  // First login - return default future date
+  return {
+    timestamp: DEFAULT_FIRST_LOGIN,
+    ip: DEFAULT_FIRST_LOGIN_IP
+  };
+}
+
+export function saveCurrentLoginTime(): void {
+  // Save current time as last login for next session
+  const now = new Date();
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  const formatted = `${days[now.getDay()]} ${months[now.getMonth()]} ${now.getDate().toString().padStart(2, ' ')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')} ${now.getFullYear()}`;
+  
+  // Generate a random IP for this session
+  const ip = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+  
+  setStorageItem(STORAGE_KEYS.lastLogin, formatted);
+  setStorageItem(STORAGE_KEYS.lastLoginIP, ip);
 }
 

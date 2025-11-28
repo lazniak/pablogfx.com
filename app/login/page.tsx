@@ -6,7 +6,9 @@ import {
   getLoginAttempts, 
   incrementLoginAttempts,
   resetLoginAttempts,
-  setStoredPassword 
+  setStoredPassword,
+  getLastLogin,
+  saveCurrentLoginTime
 } from '@/lib/storage';
 
 interface OutputLine {
@@ -156,16 +158,14 @@ export default function LoginPage() {
     setShowCursor(false);
     setIsPasswordPhase(false);
     
-    const now = new Date();
-    const lastLogin = new Date(now.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000);
-    const lastLoginStr = lastLogin.toUTCString();
-    const lastLoginIP = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+    // Get stored last login (or default: April 16, 2049 16:16:16)
+    const lastLoginInfo = getLastLogin();
     
     const successSequence: OutputLine[] = [
       { text: '', delay: 600 },
       { text: 'Authenticated successfully.', delay: 250 },
       { text: '', delay: 180 },
-      { text: `Last login: ${lastLoginStr} from ${lastLoginIP}`, delay: 220 },
+      { text: `Last login: ${lastLoginInfo.timestamp} from ${lastLoginInfo.ip}`, delay: 220 },
       { text: '', delay: 150 },
       { text: 'Establishing secure channel...', delay: 380 },
       { text: '[OK] Cryptographic handshake complete', delay: 280 },
@@ -180,6 +180,9 @@ export default function LoginPage() {
       await new Promise(resolve => setTimeout(resolve, line.delay));
       setDisplayedLines(prev => [...prev, line.text]);
     }
+
+    // Save current login time for next session
+    saveCurrentLoginTime();
 
     // Wait a moment then redirect
     await new Promise(resolve => setTimeout(resolve, 500));

@@ -12,6 +12,7 @@ import {
   getAgent,
   addAgentMessage,
   saveAgent,
+  getLastLogin,
   type Agent
 } from '@/lib/storage';
 import { initializeFileSystem, getNodeAtPath } from '@/lib/filesystem';
@@ -53,23 +54,10 @@ export default function Terminal({ onLogout }: TerminalProps) {
     const memoryUsage = Math.floor(Math.random() * 30 + 15);
     const ipv4 = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
     const ipv6 = `2a02:4780:${Math.floor(Math.random() * 99)}:${Math.floor(Math.random() * 9999).toString(16)}::${Math.floor(Math.random() * 9)}`;
-    // Generate random future date (1-365 days from now) - temporal bridge
-    const daysAhead = Math.floor(Math.random() * 365) + 1;
-    const futureDate = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
-    
-    // Format future date like: "Mon Dec 15 14:23:45 2026"
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const dayName = days[futureDate.getUTCDay()];
-    const month = months[futureDate.getUTCMonth()];
-    const day = futureDate.getUTCDate();
-    const hours = String(futureDate.getUTCHours()).padStart(2, '0');
-    const minutes = String(futureDate.getUTCMinutes()).padStart(2, '0');
-    const seconds = String(futureDate.getUTCSeconds()).padStart(2, '0');
-    const year = futureDate.getUTCFullYear();
-    const lastLogin = `${dayName} ${month} ${day} ${hours}:${minutes}:${seconds} ${year}`;
-    
-    const lastLoginIP = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+    // Get stored last login (or default: April 16, 2049 16:16:16)
+    const lastLoginInfo = getLastLogin();
+    const lastLogin = lastLoginInfo.timestamp;
+    const lastLoginIP = lastLoginInfo.ip;
     
     const welcomeMessage = [
       'Welcome to Ubuntu 25.04 (GNU/Linux 6.14.0-36-generic x86_64)',
