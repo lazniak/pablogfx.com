@@ -31,11 +31,7 @@ export default function Home() {
 
   // Always show login page initially
   if (!isLoggedIn) {
-    return <LoginPage onLogin={() => {
-      // Set session as active when login succeeds
-      sessionStorage.setItem('terminal_session_active', 'true');
-      setIsLoggedIn(true);
-    }} />;
+    return <LoginPage />;
   } else {
     return <Terminal onLogout={handleLogout} />;
   }

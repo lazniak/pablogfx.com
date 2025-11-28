@@ -9,12 +9,7 @@ import {
   setStoredPassword 
 } from '@/lib/storage';
 
-interface LoginPageProps {
-  onLogin?: () => void;
-}
-
-export default function LoginPage(props: LoginPageProps = {}) {
-  const { onLogin } = props;
+export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [attempts, setAttempts] = useState(0);
   const [output, setOutput] = useState<string[]>([]);
@@ -114,12 +109,9 @@ export default function LoginPage(props: LoginPageProps = {}) {
         resetLoginAttempts();
         setOutput(prev => [...prev, '']);
         await new Promise(resolve => setTimeout(resolve, 300));
-        // Call onLogin callback if provided
-        if (onLogin) {
-          onLogin();
-        } else {
-          window.location.href = '/'; // Redirect to home page
-        }
+        // Set session and redirect
+        sessionStorage.setItem('terminal_session_active', 'true');
+        window.location.href = '/'; // Redirect to home page
         return;
       } else {
         // Password doesn't match - show error
@@ -148,12 +140,9 @@ export default function LoginPage(props: LoginPageProps = {}) {
       resetLoginAttempts();
       setOutput(prev => [...prev, '']);
       await new Promise(resolve => setTimeout(resolve, 300));
-      // Call onLogin callback if provided
-      if (onLogin) {
-        onLogin();
-      } else {
-        window.location.href = '/'; // Redirect to home page
-      }
+      // Set session and redirect
+      sessionStorage.setItem('terminal_session_active', 'true');
+      window.location.href = '/'; // Redirect to home page
       return;
     }
 
