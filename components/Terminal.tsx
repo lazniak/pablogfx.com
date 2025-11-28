@@ -632,10 +632,10 @@ export default function Terminal({ onLogout }: TerminalProps) {
         if (data.output) {
           setOutput(prev => [...prev, data.output]);
         } else {
-          setOutput(prev => [...prev, `${parsed.command}: command not found`]);
+          setOutput(prev => [...prev, `${parsed.command}: command not found. Type 'help' for available commands.`]);
         }
       } catch (error: any) {
-        setOutput(prev => [...prev, `${parsed.command}: command not found`]);
+        setOutput(prev => [...prev, `${parsed.command}: command not found. Type 'help' for available commands.`]);
       }
     }
 
