@@ -713,7 +713,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
         
         @media (max-width: 768px) {
           .terminal-container {
-            font-size: 14px;
+            font-size: 10px;
           }
         }
         
@@ -768,7 +768,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
         
         @media (max-width: 768px) {
           .terminal-input {
-            font-size: 14px;
+            font-size: 10px;
           }
         }
         

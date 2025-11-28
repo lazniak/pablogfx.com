@@ -9,7 +9,11 @@ import {
   setStoredPassword 
 } from '@/lib/storage';
 
-export default function LoginPage() {
+interface LoginPageProps {
+  onLogin?: () => void;
+}
+
+export default function LoginPage({ onLogin }: LoginPageProps = {}) {
   const [password, setPassword] = useState('');
   const [attempts, setAttempts] = useState(0);
   const [output, setOutput] = useState<string[]>([]);
@@ -109,7 +113,12 @@ export default function LoginPage() {
         resetLoginAttempts();
         setOutput(prev => [...prev, '']);
         await new Promise(resolve => setTimeout(resolve, 300));
-        // Login successful - page will detect it via localStorage check
+        // Call onLogin callback if provided
+        if (onLogin) {
+          onLogin();
+        } else {
+          window.location.href = '/'; // Redirect to home page
+        }
         return;
       } else {
         // Password doesn't match - show error
@@ -138,7 +147,12 @@ export default function LoginPage() {
       resetLoginAttempts();
       setOutput(prev => [...prev, '']);
       await new Promise(resolve => setTimeout(resolve, 300));
-      window.location.href = '/';
+      // Call onLogin callback if provided
+      if (onLogin) {
+        onLogin();
+      } else {
+        window.location.href = '/'; // Redirect to home page
+      }
       return;
     }
 
@@ -285,7 +299,7 @@ export default function LoginPage() {
         
         @media (max-width: 768px) {
           .login-container {
-            font-size: 14px;
+            font-size: 10px;
           }
         }
       `}</style>

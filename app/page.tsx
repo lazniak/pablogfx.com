@@ -1,55 +1,43 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getStoredPassword } from '@/lib/storage';
+import { getStoredPassword, removeStoredPassword } from '@/lib/storage';
 import LoginPage from './login/page';
 import Terminal from '@/components/Terminal';
 
 export default function Home() {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
   useEffect(() => {
-    // Check if logged in on mount
-    const checkAuth = () => {
-      const password = getStoredPassword();
-      setIsLoggedIn(!!password);
-    };
+    // Check if there's an active session (stored in sessionStorage, not localStorage)
+    const sessionActive = sessionStorage.getItem('terminal_session_active') === 'true';
     
-    checkAuth();
-    
-    // Check periodically for auth changes (when login happens)
-    const interval = setInterval(checkAuth, 100);
-    
-    return () => clearInterval(interval);
+    if (sessionActive) {
+      setIsLoggedIn(true);
+    } else {
+      // Always show login page on page load/refresh
+      setIsLoggedIn(false);
+      // Clear password from localStorage on page load to force re-login
+      removeStoredPassword();
+    }
   }, []);
 
   const handleLogout = () => {
+    // Clear session
+    sessionStorage.removeItem('terminal_session_active');
+    removeStoredPassword();
     setIsLoggedIn(false);
   };
 
-  // Show loading while checking
-  if (isLoggedIn === null) {
-    return (
-      <div style={{ 
-        width: '100vw', 
-        height: '100vh', 
-        background: '#000000',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#fff',
-        fontFamily: 'VT323, monospace'
-      }}>
-        Loading...
-      </div>
-    );
-  }
-
-  // Show login or terminal based on auth state - URL stays as /
-  if (isLoggedIn) {
-    return <Terminal onLogout={handleLogout} />;
+  // Always show login page initially
+  if (!isLoggedIn) {
+    return <LoginPage onLogin={() => {
+      // Set session as active when login succeeds
+      sessionStorage.setItem('terminal_session_active', 'true');
+      setIsLoggedIn(true);
+    }} />;
   } else {
-    return <LoginPage />;
+    return <Terminal onLogout={handleLogout} />;
   }
 }
 

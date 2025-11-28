@@ -48,6 +48,10 @@ export function setStoredPassword(password: string): void {
   setStorageItem(STORAGE_KEYS.password, password);
 }
 
+export function removeStoredPassword(): void {
+  removeStorageItem(STORAGE_KEYS.password);
+}
+
 export function getLoginAttempts(): number {
   const attempts = getStorageItem(STORAGE_KEYS.attempts);
   return attempts ? parseInt(attempts, 10) : 0;
