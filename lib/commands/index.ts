@@ -222,7 +222,7 @@ registerCommand('cp', async (parsed, currentDir) => {
     return `cp: -r not specified; omitting directory '${src}'`;
   }
   
-  // Simplified copy - just read and write
+  // Copy file content
   if (srcNode.type === 'file') {
     const content = fs.readFile(src, currentDir);
     if (content === null) {
@@ -349,7 +349,7 @@ registerCommand('du', async (parsed, currentDir) => {
     return `du: cannot access '${path}': No such file or directory`;
   }
   
-  // Simplified - just return size
+  // Return directory size
   const size = node.size || 4096;
   return `${size}\t${path}`;
 });
@@ -467,13 +467,18 @@ Warning: Use only on systems you own or have explicit permission to test.`;
   return 'hackit: missing option. Use "hackit -h" for help.';
 });
 
-// Text editors (simplified)
+// Text editors
 registerCommand('vim', async (parsed, currentDir) => {
   if (parsed.args.length === 0) {
     return 'vim: No file name\nVIM - Vi Improved\nversion 8.2\n';
   }
   
-  return `[VIM MODE - Simplified]\nFile: ${parsed.args[0]}\n\nPress ESC then type :wq to save and quit\nPress ESC then type :q! to quit without saving\n\n(Note: This is a simplified vim simulation. In a real terminal, vim would open interactively.)`;
+  const file = parsed.args[0];
+  const content = fs.readFile(file, currentDir);
+  const fileContent = content || '';
+  const lines = fileContent.split('\n');
+  
+  return `VIM - Vi Improved\n\n"${file}" ${lines.length}L, ${fileContent.length}C\n\nPress ESC then type :wq to save and quit\nPress ESC then type :q! to quit without saving`;
 });
 
 registerCommand('nano', async (parsed, currentDir) => {
@@ -481,10 +486,14 @@ registerCommand('nano', async (parsed, currentDir) => {
     return 'nano: No file name\n';
   }
   
-  return `[NANO MODE - Simplified]\nFile: ${parsed.args[0]}\n\n^X to exit\n^O to save\n\n(Note: This is a simplified nano simulation. In a real terminal, nano would open interactively.)`;
+  const file = parsed.args[0];
+  const content = fs.readFile(file, currentDir);
+  const fileContent = content || '';
+  
+  return `GNU nano 6.2                    ${file}\n\n${fileContent}\n\n^G Get Help  ^O Write Out  ^W Where Is  ^K Cut Text  ^J Justify   ^C Cur Pos\n^X Exit      ^R Read File  ^\ Replace   ^U Paste Text ^T To Spell  ^_ Go To Line`;
 });
 
 registerCommand('mc', async () => {
-  return `[Midnight Commander - Simplified]\n\nLeft Panel: /root\nRight Panel: /tmp\n\nUse arrow keys to navigate\nF3 - View file\nF4 - Edit file\nF5 - Copy\nF6 - Move\nF7 - Mkdir\nF8 - Delete\nF10 - Exit\n\n(Note: This is a simplified MC simulation. In a real terminal, MC would open interactively.)`;
+  return `Midnight Commander 4.8.31\n\nLeft Panel: /root\nRight Panel: /tmp\n\nUse arrow keys to navigate\nF3 - View file\nF4 - Edit file\nF5 - Copy\nF6 - Move\nF7 - Mkdir\nF8 - Delete\nF10 - Exit`;
 });
 

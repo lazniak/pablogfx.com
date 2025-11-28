@@ -83,7 +83,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
     if (outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight;
     }
-  }, [output]);
+  }, [output, input]);
 
   const executeCommand = useCallback(async (cmd: string) => {
     if (!cmd.trim()) {
@@ -215,6 +215,24 @@ export default function Terminal({ onLogout }: TerminalProps) {
     }
   }, [input, historyIndex, executeCommand]);
 
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text');
+    setInput(prev => prev + pastedText);
+  }, []);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    // Paste from clipboard
+    navigator.clipboard.readText().then(text => {
+      setInput(prev => prev + text);
+    }).catch(() => {
+      // Fallback if clipboard API fails
+    });
+  }, []);
+
+  const displayDir = currentDir === '/home/user' || currentDir === '/root' ? '~' : currentDir;
+
   return (
     <div className="terminal-container">
       <div className="terminal-output" ref={outputRef}>
@@ -223,24 +241,25 @@ export default function Terminal({ onLogout }: TerminalProps) {
             {line}
           </div>
         ))}
-        {isProcessing && (
-          <div className="terminal-line">Processing...</div>
+        {!isProcessing && (
+          <div className="terminal-input-line">
+            <span className="terminal-prompt">
+              <span className="prompt-user">root</span>@<span className="prompt-host">prod-srv-42</span>:<span className="prompt-dir">{displayDir}</span>#
+            </span>
+            <input
+              ref={inputRef}
+              type="text"
+              className="terminal-input"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              onContextMenu={handleContextMenu}
+              autoFocus
+              disabled={isProcessing}
+            />
+          </div>
         )}
-      </div>
-      <div className="terminal-input-line">
-        <span className="terminal-prompt">
-          <span className="prompt-user">root</span>@<span className="prompt-host">prod-srv-42</span>:<span className="prompt-dir">{currentDir === '/home/user' || currentDir === '/root' ? '~' : currentDir}</span>#
-        </span>
-        <input
-          ref={inputRef}
-          type="text"
-          className="terminal-input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          autoFocus
-          disabled={isProcessing}
-        />
       </div>
       <style jsx>{`
         .terminal-container {
@@ -269,16 +288,16 @@ export default function Terminal({ onLogout }: TerminalProps) {
         }
         
         .terminal-input-line {
-          display: flex;
+          display: inline-flex;
           align-items: center;
-          padding: 10px 20px;
-          background: #000000;
+          width: 100%;
         }
         
         .terminal-prompt {
           margin-right: 8px;
           user-select: none;
           font-weight: normal;
+          white-space: nowrap;
         }
         
         .prompt-user {
@@ -301,6 +320,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
           font-family: 'Ubuntu Mono', 'Courier New', monospace;
           font-size: 14px;
           outline: none;
+          min-width: 0;
         }
         
         .terminal-input:disabled {
