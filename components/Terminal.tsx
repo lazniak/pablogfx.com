@@ -110,6 +110,13 @@ export default function Terminal({ onLogout }: TerminalProps) {
     }
   }, [output, input]);
 
+  // Always keep focus on input when not processing
+  useEffect(() => {
+    if (!isProcessing && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isProcessing]);
+
   const executeCommand = useCallback(async (cmd: string) => {
     if (!cmd.trim()) {
       return;
@@ -614,7 +621,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
           opacity: Math.min(censor / 50, 0.3),
         }}
       />
-      <div className="terminal-container">
+      <div className="terminal-container" onClick={() => inputRef.current?.focus()}>
         <div className="terminal-output" ref={outputRef}>
         {output.map((line, index) => (
           <div key={index} className="terminal-line">
