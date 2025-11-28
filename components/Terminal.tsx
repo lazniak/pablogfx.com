@@ -23,8 +23,10 @@ export default function Terminal({ onLogout }: TerminalProps) {
   const [currentDir, setCurrentDirState] = useState('/root');
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const history = useRef<string[]>([]);
 
   useEffect(() => {
@@ -117,6 +119,103 @@ export default function Terminal({ onLogout }: TerminalProps) {
       return;
     }
 
+    // Video control commands
+    if (parsed.command === 'play') {
+      const video = videoRef.current;
+      if (video) {
+        video.play();
+        setOutput(prev => [...prev, 'Video playback started.']);
+      } else {
+        setOutput(prev => [...prev, 'play: video not found']);
+      }
+      setIsProcessing(false);
+      return;
+    }
+
+    if (parsed.command === 'pause') {
+      const video = videoRef.current;
+      if (video) {
+        video.pause();
+        setOutput(prev => [...prev, 'Video playback paused.']);
+      } else {
+        setOutput(prev => [...prev, 'pause: video not found']);
+      }
+      setIsProcessing(false);
+      return;
+    }
+
+    if (parsed.command === 'mute') {
+      const video = videoRef.current;
+      if (video) {
+        video.muted = !video.muted;
+        setIsMuted(video.muted);
+        setOutput(prev => [...prev, `Video ${video.muted ? 'muted' : 'unmuted'}.`]);
+      } else {
+        setOutput(prev => [...prev, 'mute: video not found']);
+      }
+      setIsProcessing(false);
+      return;
+    }
+
+    if (parsed.command === 'restart' || parsed.command === 'reboot') {
+      const video = videoRef.current;
+      if (video) {
+        video.currentTime = 0;
+        video.play();
+        setOutput(prev => [...prev, 'Video restarted.']);
+      } else {
+        setOutput(prev => [...prev, `${parsed.command}: video not found`]);
+      }
+      setIsProcessing(false);
+      return;
+    }
+
+    if (parsed.command === 'seek' || parsed.command === 'forward' || parsed.command === 'backward') {
+      const video = videoRef.current;
+      if (!video) {
+        setOutput(prev => [...prev, `${parsed.command}: video not found`]);
+        setIsProcessing(false);
+        return;
+      }
+
+      const time = parsed.args[0] ? parseFloat(parsed.args[0]) : 10;
+      if (parsed.command === 'seek') {
+        video.currentTime = Math.max(0, Math.min(video.duration, time));
+        setOutput(prev => [...prev, `Video seeked to ${time.toFixed(1)}s.`]);
+      } else if (parsed.command === 'forward') {
+        video.currentTime = Math.min(video.duration, video.currentTime + time);
+        setOutput(prev => [...prev, `Video forwarded ${time}s.`]);
+      } else if (parsed.command === 'backward') {
+        video.currentTime = Math.max(0, video.currentTime - time);
+        setOutput(prev => [...prev, `Video rewound ${time}s.`]);
+      }
+      setIsProcessing(false);
+      return;
+    }
+
+    if (parsed.command === 'volume') {
+      const video = videoRef.current;
+      if (!video) {
+        setOutput(prev => [...prev, 'volume: video not found']);
+        setIsProcessing(false);
+        return;
+      }
+
+      if (parsed.args.length > 0) {
+        const vol = parseFloat(parsed.args[0]);
+        if (vol >= 0 && vol <= 1) {
+          video.volume = vol;
+          setOutput(prev => [...prev, `Volume set to ${(vol * 100).toFixed(0)}%.`]);
+        } else {
+          setOutput(prev => [...prev, 'volume: value must be between 0 and 1']);
+        }
+      } else {
+        setOutput(prev => [...prev, `Current volume: ${(video.volume * 100).toFixed(0)}%`]);
+      }
+      setIsProcessing(false);
+      return;
+    }
+
     if (parsed.command === 'help') {
       setOutput(prev => [...prev, 
         'Available commands:',
@@ -128,6 +227,11 @@ export default function Terminal({ onLogout }: TerminalProps) {
         '  wget, curl',
         '  hackit (use hackit -h for help)',
         '  clear, exit, help',
+        '',
+        'Video controls:',
+        '  play, pause, mute, restart, reboot',
+        '  seek <seconds>, forward [seconds], backward [seconds]',
+        '  volume [0-1]',
         '',
         'Use arrow keys for command history.',
       ]);
@@ -233,9 +337,57 @@ export default function Terminal({ onLogout }: TerminalProps) {
 
   const displayDir = currentDir === '/home/user' || currentDir === '/root' ? '~' : currentDir;
 
+  useEffect(() => {
+    const video = document.getElementById('background-video') as HTMLVideoElement;
+    let hasStarted = false;
+
+    const startVideo = () => {
+      if (!hasStarted && video) {
+        hasStarted = true;
+        video.play().catch(() => {
+          // Video play failed
+        });
+        // Remove all listeners after first interaction
+        document.removeEventListener('click', startVideo);
+        document.removeEventListener('keydown', startVideo);
+        document.removeEventListener('mousemove', startVideo);
+        document.removeEventListener('touchstart', startVideo);
+      }
+    };
+
+    // Try to play immediately
+    if (video) {
+      video.play().catch(() => {
+        // Auto-play blocked, wait for user interaction
+        document.addEventListener('click', startVideo, { once: true });
+        document.addEventListener('keydown', startVideo, { once: true });
+        document.addEventListener('mousemove', startVideo, { once: true });
+        document.addEventListener('touchstart', startVideo, { once: true });
+      });
+    }
+
+    return () => {
+      document.removeEventListener('click', startVideo);
+      document.removeEventListener('keydown', startVideo);
+      document.removeEventListener('mousemove', startVideo);
+      document.removeEventListener('touchstart', startVideo);
+    };
+  }, []);
+
   return (
-    <div className="terminal-container">
-      <div className="terminal-output" ref={outputRef}>
+    <div className="terminal-wrapper">
+      <video
+        ref={videoRef}
+        id="background-video"
+        className="background-video"
+        autoPlay
+        loop
+        playsInline
+      >
+        <source src="/background.mp4" type="video/mp4" />
+      </video>
+      <div className="terminal-container">
+        <div className="terminal-output" ref={outputRef}>
         {output.map((line, index) => (
           <div key={index} className="terminal-line">
             {line}
@@ -260,18 +412,55 @@ export default function Terminal({ onLogout }: TerminalProps) {
             />
           </div>
         )}
+        </div>
       </div>
       <style jsx>{`
-        .terminal-container {
+        .terminal-wrapper {
+          position: relative;
           width: 100%;
           height: 100vh;
+          overflow: hidden;
           background: #000000;
+        }
+        
+        .background-video {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 100vw;
+          height: auto;
+          min-height: 100vh;
+          object-fit: contain;
+          object-position: center;
+          z-index: 0;
+          pointer-events: none;
+        }
+        
+        .terminal-container {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 100vw;
+          height: 56.25vw;
+          max-height: 100vh;
+          background: rgba(0, 0, 0, 0.75);
+          backdrop-filter: blur(3px);
           color: #ffffff;
           font-family: 'Ubuntu Mono', 'Courier New', monospace;
           font-size: 14px;
           display: flex;
           flex-direction: column;
           overflow: hidden;
+          z-index: 1;
+        }
+        
+        @media (max-aspect-ratio: 16/9) {
+          .terminal-container {
+            width: 177.78vh;
+            height: 100vh;
+          }
         }
         
         .terminal-output {
