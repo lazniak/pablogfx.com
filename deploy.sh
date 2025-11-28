@@ -91,11 +91,20 @@ server {
         access_log off;
     }
 
-    # Next.js static files
+    # Next.js static files (MUST be before location /)
     location /_next/static {
         alias /var/www/pablogfx.com/.next/static;
         expires 365d;
         add_header Cache-Control "public, immutable";
+        access_log off;
+    }
+
+    # Next.js static chunks and other assets
+    location /_next {
+        alias /var/www/pablogfx.com/.next;
+        expires 365d;
+        add_header Cache-Control "public, immutable";
+        access_log off;
     }
 
     # Proxy to Next.js application (catch-all for everything else)
