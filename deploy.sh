@@ -47,40 +47,14 @@ if [ -f "$NGINX_CONF_FILE" ]; then
     echo -e "${GREEN}Backed up existing config${NC}"
 fi
 
-# Create nginx configuration
-echo -e "${GREEN}Creating nginx configuration...${NC}"
+# Create initial nginx configuration (HTTP only, SSL will be added by certbot)
+echo -e "${GREEN}Creating initial nginx configuration (HTTP only)...${NC}"
 
 cat > "$NGINX_CONF_FILE" << 'EOF'
 server {
     listen 80;
     listen [::]:80;
     server_name pablogfx.com www.pablogfx.com;
-
-    # Redirect HTTP to HTTPS
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name pablogfx.com www.pablogfx.com;
-
-    # SSL certificates (will be added by certbot)
-    ssl_certificate /etc/letsencrypt/live/pablogfx.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/pablogfx.com/privkey.pem;
-    
-    # SSL configuration
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_prefer_server_ciphers on;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
-
-    # Security headers
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
 
     # Logging
     access_log /var/log/nginx/pablogfx.com.access.log;
@@ -143,6 +117,10 @@ else
     exit 1
 fi
 
+# Reload nginx with HTTP-only config first
+echo -e "${GREEN}Reloading nginx with HTTP configuration...${NC}"
+systemctl reload nginx
+
 # Install SSL certificate with certbot (if not already installed)
 if ! command -v certbot &> /dev/null; then
     echo -e "${YELLOW}Certbot not found. Installing...${NC}"
@@ -157,12 +135,16 @@ if [ -d "/etc/letsencrypt/live/${DOMAIN}" ]; then
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         certbot renew --nginx -d "$DOMAIN" -d "www.$DOMAIN"
+    else
+        # Just update nginx config to use existing certificate
+        certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --redirect
     fi
 else
     echo -e "${GREEN}Obtaining SSL certificate...${NC}"
     echo "Make sure DNS is pointing to this server before continuing!"
     read -p "Press Enter to continue with SSL certificate generation..."
     
+    # Certbot will automatically modify nginx config to add SSL
     certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos --email admin@${DOMAIN} --redirect
 fi
 
@@ -198,9 +180,18 @@ fi
 pm2 save
 pm2 startup 2>/dev/null || echo -e "${YELLOW}PM2 startup already configured${NC}"
 
-# Reload nginx
-echo -e "${GREEN}Reloading nginx...${NC}"
-systemctl reload nginx
+# Test nginx configuration again (after certbot modifications)
+echo -e "${GREEN}Testing nginx configuration after SSL setup...${NC}"
+if nginx -t; then
+    echo -e "${GREEN}Nginx configuration is valid${NC}"
+    # Reload nginx
+    echo -e "${GREEN}Reloading nginx...${NC}"
+    systemctl reload nginx
+else
+    echo -e "${RED}Nginx configuration test failed after SSL setup!${NC}"
+    echo "Please check the configuration manually."
+    exit 1
+fi
 
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}Deployment completed successfully!${NC}"
