@@ -1,7 +1,7 @@
 // Archive commands (tar, zip, gzip, etc.)
 
 import { ParsedCommand } from '../commandParser';
-import { registerCommand } from './index';
+import { registerCommand, getCommandHandler } from './registry';
 import * as fs from '../filesystem';
 
 // tar command
@@ -293,7 +293,7 @@ registerCommand('bzip2', async (parsed: ParsedCommand) => {
 
 // bunzip2 command
 registerCommand('bunzip2', async (parsed: ParsedCommand) => {
-  const handler = (await import('./index')).getCommandHandler('bzip2');
+  const handler = getCommandHandler('bzip2');
   if (handler) {
     return handler({ ...parsed, flags: { ...parsed.flags, d: true } }, '');
   }
@@ -342,7 +342,7 @@ registerCommand('xz', async (parsed: ParsedCommand) => {
 
 // unxz command
 registerCommand('unxz', async (parsed: ParsedCommand) => {
-  const handler = (await import('./index')).getCommandHandler('xz');
+  const handler = getCommandHandler('xz');
   if (handler) {
     return handler({ ...parsed, flags: { ...parsed.flags, d: true } }, '');
   }
@@ -534,7 +534,6 @@ Usage:     rar <command> -<switch 1> -<switch N> <archive> <files...>
 // unrar command
 registerCommand('unrar', async (parsed: ParsedCommand) => {
   const command = parsed.args[0];
-  const archive = parsed.args[1];
   
   if (!command) {
     return `
@@ -551,7 +550,7 @@ Usage:     unrar <command> -<switch 1> -<switch N> <archive> <files...>
   x             Extract files with full path`;
   }
   
-  const handler = (await import('./index')).getCommandHandler('rar');
+  const handler = getCommandHandler('rar');
   if (handler) {
     return handler(parsed, '');
   }

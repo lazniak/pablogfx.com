@@ -1,23 +1,18 @@
-// Command handlers registry
+// Command handlers - main entry point
+// Re-exports registry functions and imports all command modules
 
-import { ParsedCommand } from '../commandParser';
 import { getCurrentDir, setCurrentDir } from '../storage';
 import * as fs from '../filesystem';
 
-export type CommandHandler = (
-  parsed: ParsedCommand,
-  currentDir: string
-) => Promise<string | string[]> | string | string[];
+// Re-export from registry to maintain API compatibility
+export { 
+  registerCommand, 
+  getCommandHandler, 
+  getAllCommands
+} from './registry';
+export type { CommandHandler } from './registry';
 
-const handlers: { [key: string]: CommandHandler } = {};
-
-export function registerCommand(name: string, handler: CommandHandler): void {
-  handlers[name] = handler;
-}
-
-export function getCommandHandler(command: string): CommandHandler | null {
-  return handlers[command] || null;
-}
+import { registerCommand } from './registry';
 
 // Basic commands
 registerCommand('ls', async (parsed, currentDir) => {

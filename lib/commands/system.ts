@@ -1,7 +1,7 @@
 // System management commands (systemctl, service, shutdown, etc.)
 
 import { ParsedCommand } from '../commandParser';
-import { registerCommand } from './index';
+import { registerCommand } from './registry';
 
 // Service list for simulation
 const SERVICES = [

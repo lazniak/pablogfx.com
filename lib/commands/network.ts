@@ -1,7 +1,7 @@
 // Network commands (ping, ssh, nmap, ifconfig, etc.)
 
 import { ParsedCommand } from '../commandParser';
-import { registerCommand } from './index';
+import { registerCommand, getCommandHandler } from './registry';
 import { generatePingOutput, generateTracerouteOutput, generateNmapProgress } from '../progressBar';
 
 // ifconfig command
@@ -370,7 +370,7 @@ registerCommand('nc', async (parsed: ParsedCommand) => {
 
 // netcat alias
 registerCommand('netcat', async (parsed: ParsedCommand) => {
-  const handler = (await import('./index')).getCommandHandler('nc');
+  const handler = getCommandHandler('nc');
   if (handler) {
     return handler(parsed, '');
   }

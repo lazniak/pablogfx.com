@@ -1,7 +1,7 @@
 // Text processing commands (head, tail, wc, sort, awk, sed, etc.)
 
 import { ParsedCommand } from '../commandParser';
-import { registerCommand } from './index';
+import { registerCommand } from './registry';
 import * as fs from '../filesystem';
 
 // head command

@@ -1,7 +1,7 @@
 // Process management commands (kill, ps, top, htop, etc.)
 
 import { ParsedCommand } from '../commandParser';
-import { registerCommand } from './index';
+import { registerCommand } from './registry';
 
 // Simulated process list
 function getProcessList(): Array<{pid: number, user: string, cpu: number, mem: number, vsz: number, rss: number, tty: string, stat: string, start: string, time: string, command: string}> {

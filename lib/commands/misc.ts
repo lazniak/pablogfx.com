@@ -1,7 +1,7 @@
 // Miscellaneous commands (clear, history, alias, export, dd, etc.)
 
 import { ParsedCommand } from '../commandParser';
-import { registerCommand } from './index';
+import { registerCommand } from './registry';
 import { getCommandHistory } from '../storage';
 import { generateDdProgress } from '../progressBar';
 

@@ -1,7 +1,7 @@
 // Extended file commands (stat, ln, tree, file, etc.)
 
 import { ParsedCommand } from '../commandParser';
-import { registerCommand } from './index';
+import { registerCommand } from './registry';
 import * as fs from '../filesystem';
 
 // stat command

@@ -1,7 +1,7 @@
 // User management commands (useradd, passwd, sudo, etc.)
 
 import { ParsedCommand } from '../commandParser';
-import { registerCommand } from './index';
+import { registerCommand } from './registry';
 
 // Storage for users
 function getUsers(): Array<{name: string, uid: number, gid: number, home: string, shell: string, groups: string[]}> {

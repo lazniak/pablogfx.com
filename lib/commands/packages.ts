@@ -1,7 +1,7 @@
 // Package management commands (apt, dpkg, etc.)
 
 import { ParsedCommand } from '../commandParser';
-import { registerCommand } from './index';
+import { registerCommand, getCommandHandler } from './registry';
 import { generateAptProgress, generateInstallProgress } from '../progressBar';
 
 // Storage for installed packages
@@ -163,10 +163,9 @@ See apt(8) for more information about the available commands.`;
 // apt-get command (alias for apt)
 registerCommand('apt-get', async (parsed: ParsedCommand) => {
   // Same as apt for most cases
-  const aptParsed = { ...parsed };
-  const handler = (await import('./index')).getCommandHandler('apt');
+  const handler = getCommandHandler('apt');
   if (handler) {
-    return handler(aptParsed, '');
+    return handler(parsed, '');
   }
   return 'apt-get: command not found';
 });
@@ -358,14 +357,14 @@ registerCommand('dpkg-query', async (parsed: ParsedCommand) => {
   const showFlag = parsed.flags['W'] || parsed.flags['show'];
   
   if (listFlag) {
-    const handler = (await import('./index')).getCommandHandler('dpkg');
+    const handler = getCommandHandler('dpkg');
     if (handler) {
       return handler({ ...parsed, flags: { l: true } }, '');
     }
   }
   
   if (statusFlag) {
-    const handler = (await import('./index')).getCommandHandler('dpkg');
+    const handler = getCommandHandler('dpkg');
     if (handler) {
       return handler({ ...parsed, flags: { s: true } }, '');
     }
@@ -492,7 +491,7 @@ Commands:
 
 // pip3 command (alias for pip)
 registerCommand('pip3', async (parsed: ParsedCommand) => {
-  const handler = (await import('./index')).getCommandHandler('pip');
+  const handler = getCommandHandler('pip');
   if (handler) {
     return handler(parsed, '');
   }
