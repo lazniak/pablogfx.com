@@ -63,7 +63,28 @@ server {
     # Root directory
     root /var/www/pablogfx.com;
 
-    # Proxy to Next.js application
+    # Static files from public directory (MUST be before proxy_pass)
+    location ~* ^/(background\.mp4|background\.json|.*\.(jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot|css|js|mp4|mov|avi|webm))$ {
+        root /var/www/pablogfx.com/public;
+        try_files $uri =404;
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+        access_log off;
+        
+        # For large video files
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+    }
+
+    # Next.js static files
+    location /_next/static {
+        alias /var/www/pablogfx.com/.next/static;
+        expires 365d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Proxy to Next.js application (catch-all for everything else)
     location / {
         proxy_pass http://localhost:3663;
         proxy_http_version 1.1;
@@ -75,18 +96,14 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
         
-        # Timeouts
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-    }
-
-    # Static files from public directory
-    location ~* \.(mp4|mov|avi|webm|json|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot|css|js)$ {
-        root /var/www/pablogfx.com/public;
-        expires 30d;
-        add_header Cache-Control "public, immutable";
-        access_log off;
+        # Timeouts (increased for large files)
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        
+        # Buffer settings for large files
+        proxy_buffering off;
+        proxy_request_buffering off;
     }
 
     # Next.js static files
