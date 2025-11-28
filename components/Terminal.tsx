@@ -153,6 +153,50 @@ export default function Terminal({ onLogout }: TerminalProps) {
         addAgentMessage(activeAgent, 'user', message);
         setOutput(prev => [...prev, `[Agent ${activeAgent}] You: ${message}`]);
         
+        // Quantum loading messages
+        const quantumMessages = [
+          'Synchronizing quantum entanglement matrices...',
+          'Establishing temporal bridge connection...',
+          'Decrypting chrono-spatial coordinates...',
+          'Calibrating neural-quantum interface...',
+          'Traversing parallel timeline nodes...',
+          'Stabilizing wormhole aperture...',
+          'Mapping multidimensional data streams...',
+          'Resolving temporal paradox buffers...',
+          'Aligning quantum coherence fields...',
+          'Initializing tachyon pulse emitter...',
+          'Parsing hyperdimensional signals...',
+          'Unlocking encrypted timeline fragments...',
+          'Channeling zero-point energy flux...',
+          'Recalibrating chrono-sync protocols...',
+          'Bridging consciousness resonance...',
+          'Quantum tunneling through firewall...',
+          'Decompressing temporal data packets...',
+          'Harmonizing phase wave frequencies...',
+        ];
+        const spinners = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+        let spinnerIdx = 0;
+        let msgIdx = Math.floor(Math.random() * quantumMessages.length);
+        let loadingActive = true;
+        
+        // Add initial loading line
+        setOutput(prev => [...prev, `[Agent ${activeAgent}] ${spinners[0]} ${quantumMessages[msgIdx]}`]);
+        
+        // Start loading animation
+        const loadingInterval = setInterval(() => {
+          if (!loadingActive) return;
+          spinnerIdx = (spinnerIdx + 1) % spinners.length;
+          // Change message every 3 spins
+          if (spinnerIdx === 0) {
+            msgIdx = (msgIdx + 1) % quantumMessages.length;
+          }
+          setOutput(prev => {
+            const newOutput = [...prev];
+            newOutput[newOutput.length - 1] = `[Agent ${activeAgent}] ${spinners[spinnerIdx]} ${quantumMessages[msgIdx]}`;
+            return newOutput;
+          });
+        }, 80);
+        
         try {
           const agent = getAgent(activeAgent);
           const history = agent?.messages || [];
@@ -168,6 +212,8 @@ export default function Terminal({ onLogout }: TerminalProps) {
           });
           
           if (!response.ok) {
+            loadingActive = false;
+            clearInterval(loadingInterval);
             throw new Error('Failed to get agent response');
           }
           
@@ -176,9 +222,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
           const decoder = new TextDecoder();
           let agentResponse = '';
           let buffer = '';
-          
-          // Add initial line for agent response
-          setOutput(prev => [...prev, `[Agent ${activeAgent}] `]);
+          let firstChunk = true;
           
           if (reader) {
             while (true) {
@@ -201,15 +245,22 @@ export default function Terminal({ onLogout }: TerminalProps) {
                         video.currentTime = Math.max(0, Math.min(video.duration, targetTime));
                       }
                     } else if (data.chunk) {
+                      // Stop loading animation on first real chunk
+                      if (firstChunk) {
+                        loadingActive = false;
+                        clearInterval(loadingInterval);
+                        firstChunk = false;
+                      }
                       agentResponse += data.chunk;
                       // Update the last line with accumulated response
                       setOutput(prev => {
                         const newOutput = [...prev];
-                        // Update the last line (agent response line)
                         newOutput[newOutput.length - 1] = `[Agent ${activeAgent}] ${agentResponse}`;
                         return newOutput;
                       });
                     } else if (data.done && data.output) {
+                      loadingActive = false;
+                      clearInterval(loadingInterval);
                       agentResponse = data.output;
                       // Final update
                       setOutput(prev => {
@@ -226,11 +277,16 @@ export default function Terminal({ onLogout }: TerminalProps) {
             }
           }
           
+          // Cleanup loading animation
+          loadingActive = false;
+          clearInterval(loadingInterval);
+          
           // Save complete message
           if (agentResponse) {
             addAgentMessage(activeAgent, 'assistant', agentResponse);
           }
         } catch (error: any) {
+          loadingActive = false;
           setOutput(prev => [...prev, `agent: error - ${error.message}`]);
         }
       }
