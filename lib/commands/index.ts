@@ -596,9 +596,7 @@ registerCommand('nano', async (parsed, currentDir) => {
   return `GNU nano 6.2                    ${file}\n\n${fileContent}\n\n^G Get Help  ^O Write Out  ^W Where Is  ^K Cut Text  ^J Justify   ^C Cur Pos\n^X Exit      ^R Read File  ^\ Replace   ^U Paste Text ^T To Spell  ^_ Go To Line`;
 });
 
-registerCommand('mc', async () => {
-  return `Midnight Commander 4.8.31\n\nLeft Panel: /root\nRight Panel: /tmp\n\nUse arrow keys to navigate\nF3 - View file\nF4 - Edit file\nF5 - Copy\nF6 - Move\nF7 - Mkdir\nF8 - Delete\nF10 - Exit`;
-});
+// mc is handled directly in Terminal.tsx for full interactive mode
 
 // Import all command modules
 import './packages';

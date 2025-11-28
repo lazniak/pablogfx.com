@@ -19,6 +19,7 @@ import {
 } from '@/lib/storage';
 import { initializeFileSystem, getNodeAtPath } from '@/lib/filesystem';
 import { detectUserLevel } from '@/lib/userLevel';
+import MidnightCommander from './MidnightCommander';
 
 interface TerminalProps {
   onLogout?: () => void;
@@ -34,6 +35,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
   const [brightness, setBrightness] = useState(40); // 0-100%
   const [censor, setCensor] = useState(25); // 0-100% blur
   const [activeAgent, setActiveAgent] = useState<number | null>(null);
+  const [mcMode, setMcMode] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -146,6 +148,13 @@ export default function Terminal({ onLogout }: TerminalProps) {
 
     if (parsed.command === 'clear' || parsed.command === 'cls') {
       setOutput([]);
+      setIsProcessing(false);
+      return;
+    }
+
+    // Launch Midnight Commander
+    if (parsed.command === 'mc') {
+      setMcMode(true);
       setIsProcessing(false);
       return;
     }
@@ -813,6 +822,18 @@ export default function Terminal({ onLogout }: TerminalProps) {
       });
     }
   }, []);
+
+  // Render Midnight Commander if active
+  if (mcMode) {
+    return (
+      <MidnightCommander 
+        onExit={() => {
+          setMcMode(false);
+          setOutput(prev => [...prev, 'Midnight Commander exited.']);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="terminal-wrapper">
