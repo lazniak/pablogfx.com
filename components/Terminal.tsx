@@ -33,6 +33,116 @@ import { renderSequence, createTerminalCallbacks } from '@/lib/agq-assistant/ren
 import { generateActivationPrompt, generateWelcomeSequence, generateExitSequence } from '@/lib/agq-assistant/prompts';
 import { AGQSequence } from '@/lib/agq-assistant/tools';
 
+// Quantum Scan Image Component with progressive reveal and noise animation
+function QuantumScanImage({ imageUrl }: { imageUrl: string }) {
+  const [revealProgress, setRevealProgress] = useState(0);
+  const [noiseOpacity, setNoiseOpacity] = useState(1);
+  const [loaded, setLoaded] = useState(false);
+  
+  useEffect(() => {
+    // Progressive reveal animation
+    const revealInterval = setInterval(() => {
+      setRevealProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(revealInterval);
+          return 100;
+        }
+        return prev + 2;
+      });
+    }, 30);
+    
+    // Noise fade out after image loads
+    const noiseInterval = setInterval(() => {
+      setNoiseOpacity(prev => {
+        if (prev <= 0) {
+          clearInterval(noiseInterval);
+          return 0;
+        }
+        return Math.max(0, prev - 0.05);
+      });
+    }, 100);
+    
+    return () => {
+      clearInterval(revealInterval);
+      clearInterval(noiseInterval);
+    };
+  }, []);
+  
+  // Generate noise pattern
+  const generateNoise = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 300;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    
+    const imageData = ctx.createImageData(canvas.width, canvas.height);
+    for (let i = 0; i < imageData.data.length; i += 4) {
+      const value = Math.random() * 255;
+      imageData.data[i] = value;     // R
+      imageData.data[i + 1] = value; // G
+      imageData.data[i + 2] = value; // B
+      imageData.data[i + 3] = 255;   // A
+    }
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL();
+  };
+  
+  const [noiseDataUrl] = useState(() => generateNoise());
+  
+  return (
+    <div className="terminal-line terminal-image-container" style={{ position: 'relative', margin: '10px 0' }}>
+      <div style={{ position: 'relative', display: 'inline-block', border: '1px solid #00ffff' }}>
+        <img 
+          src={imageUrl} 
+          alt="Quantum scan result" 
+          className="terminal-scan-image"
+          onLoad={() => setLoaded(true)}
+          style={{
+            maxWidth: '100%',
+            height: 'auto',
+            display: 'block',
+            clipPath: `inset(0 ${100 - revealProgress}% 0 0)`,
+            transition: 'clip-path 0.1s linear',
+            filter: loaded ? 'none' : 'blur(2px)',
+          }}
+        />
+        {/* Noise overlay */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundImage: `url(${noiseDataUrl})`,
+            backgroundSize: 'cover',
+            opacity: noiseOpacity,
+            pointerEvents: 'none',
+            mixBlendMode: 'overlay',
+            animation: 'quantumNoise 0.1s infinite',
+          }}
+        />
+        {/* Scan line effect */}
+        {revealProgress < 100 && (
+          <div
+            style={{
+              position: 'absolute',
+              top: `${(revealProgress / 100) * 100}%`,
+              left: 0,
+              width: '100%',
+              height: '2px',
+              background: 'linear-gradient(to bottom, transparent, #00ffff, transparent)',
+              boxShadow: '0 0 10px #00ffff',
+              transition: 'top 0.1s linear',
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Color code to CSS color mapping
 const ANSI_COLORS: { [key: string]: string } = {
   '0': '',          // Reset
@@ -1162,23 +1272,18 @@ export default function Terminal({ onLogout }: TerminalProps) {
       <div className="terminal-container" onClick={() => inputRef.current?.focus()}>
         <div className="terminal-output" ref={outputRef}>
         {output.map((line, index) => {
-          // Check if line is an image data URL
+          // Check if line is a quantum scan image marker
+          if (line.startsWith('[QUANTUM_SCAN_IMAGE:')) {
+            const imageUrl = line.replace('[QUANTUM_SCAN_IMAGE:', '').replace(']', '');
+            return (
+              <QuantumScanImage key={index} imageUrl={imageUrl} />
+            );
+          }
+          
+          // Check if line is an image data URL (legacy support)
           if (line.startsWith('data:image/')) {
             return (
-              <div key={index} className="terminal-line terminal-image-container">
-                <img 
-                  src={line} 
-                  alt="Quantum scan result" 
-                  className="terminal-scan-image"
-                  style={{
-                    maxWidth: '100%',
-                    height: 'auto',
-                    border: '1px solid #00ffff',
-                    margin: '10px 0',
-                    display: 'block',
-                  }}
-                />
-              </div>
+              <QuantumScanImage key={index} imageUrl={line} />
             );
           }
           
@@ -1361,6 +1466,15 @@ export default function Terminal({ onLogout }: TerminalProps) {
         
         .terminal-output::-webkit-scrollbar-thumb:hover {
           background: #555;
+        }
+        
+        @keyframes quantumNoise {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.5; }
+        }
+        
+        .terminal-scan-image {
+          image-rendering: pixelated;
         }
       `}</style>
     </div>

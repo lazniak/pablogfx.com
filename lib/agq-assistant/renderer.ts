@@ -611,7 +611,6 @@ async function renderQuantumScan(
     'Kalibracja viewport\'u temporalnego...',
     'Synchronizacja z wymiarami równoległymi...',
     'Filtrowanie interferencji kwantowej...',
-    'Ekstrakcja obrazu z archiwum...',
   ];
   
   for (const progressText of progressSteps) {
@@ -634,18 +633,48 @@ async function renderQuantumScan(
     callbacks.onUpdateLastLine(`${COLORS.success}✓${COLORS.reset} ${progressText}`);
   }
   
-  // Call API to generate scan
+  // Animated extraction phase
+  callbacks.onOutput('');
+  const extractionSpinner = SPINNERS.quantum;
+  let extractionIdx = 0;
+  const extractionStartTime = Date.now();
+  const extractionDuration = 2000; // 2 seconds of animation
+  
+  // Start API call in parallel
+  const scanPromise = fetch('/api/agq-scan', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      target,
+      dimension,
+      classification,
+      timestamp,
+    }),
+  });
+  
+  // Animate extraction while waiting
+  while (Date.now() - extractionStartTime < extractionDuration) {
+    if (callbacks.isAborted()) return;
+    const spinner = extractionSpinner[extractionIdx % extractionSpinner.length];
+    const progress = Math.min((Date.now() - extractionStartTime) / extractionDuration, 1);
+    const percent = Math.round(progress * 100);
+    
+    // Show progress with scanning effect
+    const scanChars = ['█', '▓', '▒', '░'];
+    const scanBar = Array(20).fill(0).map((_, i) => {
+      const phase = (progress * 20 - i) * 2;
+      if (phase > 0 && phase < 1) return scanChars[Math.floor(phase * scanChars.length)];
+      return phase >= 1 ? '█' : '░';
+    }).join('');
+    
+    callbacks.onUpdateLastLine(`${COLORS.info}${spinner}${COLORS.reset} Ekstrakcja obrazu z archiwum... [${scanBar}] ${percent}%`);
+    await sleep(80);
+    extractionIdx++;
+  }
+  
+  // Wait for API response
   try {
-    const response = await fetch('/api/agq-scan', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        target,
-        dimension,
-        classification,
-        timestamp,
-      }),
-    });
+    const response = await scanPromise;
     
     if (!response.ok) {
       throw new Error('Scan failed');
@@ -654,6 +683,7 @@ async function renderQuantumScan(
     const data = await response.json();
     
     // Display metadata
+    callbacks.onUpdateLastLine(`${COLORS.success}✓${COLORS.reset} Ekstrakcja obrazu z archiwum...`);
     callbacks.onOutput('');
     callbacks.onOutput(`${COLORS.dim}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLORS.reset}`);
     callbacks.onOutput(`${COLORS.highlight}QUANTUM SCAN RESULT${COLORS.reset}`);
@@ -665,14 +695,15 @@ async function renderQuantumScan(
     callbacks.onOutput(`${COLORS.info}Source:${COLORS.reset} ${data.metadata.source}`);
     callbacks.onOutput('');
     
-    // Display image (as data URL - Terminal will render it)
+    // Display image with progressive reveal marker
     const imageUrl = `data:${data.mimeType};base64,${data.image}`;
-    callbacks.onOutput(imageUrl); // Direct image URL for Terminal to render
+    callbacks.onOutput(`[QUANTUM_SCAN_IMAGE:${imageUrl}]`); // Special marker for progressive reveal
     callbacks.onOutput(`${COLORS.dim}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLORS.reset}`);
     callbacks.onOutput(`${COLORS.warning}Uwaga: Obraz może być zniekształcony przez interferencję wymiarową.${COLORS.reset}`);
     
   } catch (error: any) {
-    callbacks.onOutput(`${COLORS.error}[FAIL]${COLORS.reset} Skan nieudany: ${error.message}`);
+    callbacks.onUpdateLastLine(`${COLORS.error}[FAIL]${COLORS.reset} Ekstrakcja nieudana`);
+    callbacks.onOutput(`${COLORS.error}Skan nieudany: ${error.message}${COLORS.reset}`);
   }
 }
 
