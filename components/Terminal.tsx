@@ -33,6 +33,89 @@ import { renderSequence, createTerminalCallbacks } from '@/lib/agq-assistant/ren
 import { generateActivationPrompt, generateWelcomeSequence, generateExitSequence } from '@/lib/agq-assistant/prompts';
 import { AGQSequence } from '@/lib/agq-assistant/tools';
 
+// ANSI color code to CSS color mapping
+const ANSI_COLORS: { [key: string]: string } = {
+  '30': '#000000', // Black
+  '31': '#ff5555', // Red
+  '32': '#50fa7b', // Green
+  '33': '#f1fa8c', // Yellow
+  '34': '#6272a4', // Blue
+  '35': '#ff79c6', // Magenta/Purple
+  '36': '#8be9fd', // Cyan
+  '37': '#f8f8f2', // White
+  '90': '#6272a4', // Bright Black (Gray)
+  '91': '#ff6e6e', // Bright Red
+  '92': '#69ff94', // Bright Green
+  '93': '#ffffa5', // Bright Yellow
+  '94': '#d6acff', // Bright Blue
+  '95': '#ff92df', // Bright Magenta
+  '96': '#a4ffff', // Bright Cyan
+  '97': '#ffffff', // Bright White
+};
+
+// Parse ANSI escape codes and return React elements
+function parseAnsiToReact(text: string, key: number): React.ReactNode {
+  // Regex to match ANSI escape sequences
+  const ansiRegex = /\x1b\[([0-9;]*)m/g;
+  
+  // Also match the literal escape sequences that might come from JSON
+  const literalRegex = /\[([0-9;]*)m/g;
+  
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let currentColor: string | null = null;
+  let match;
+  
+  // First try to match actual ANSI codes
+  const combinedText = text.replace(/\\x1b/g, '\x1b');
+  
+  // Use literal regex for codes that came through as text
+  while ((match = literalRegex.exec(combinedText)) !== null) {
+    // Add text before this match
+    if (match.index > lastIndex) {
+      const textPart = combinedText.substring(lastIndex, match.index);
+      if (textPart) {
+        parts.push(
+          <span key={`${key}-${parts.length}`} style={currentColor ? { color: currentColor } : undefined}>
+            {textPart}
+          </span>
+        );
+      }
+    }
+    
+    // Parse the ANSI code
+    const codes = match[1].split(';');
+    for (const code of codes) {
+      if (code === '0' || code === '') {
+        currentColor = null; // Reset
+      } else if (ANSI_COLORS[code]) {
+        currentColor = ANSI_COLORS[code];
+      }
+    }
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add remaining text
+  if (lastIndex < combinedText.length) {
+    const remainingText = combinedText.substring(lastIndex);
+    if (remainingText) {
+      parts.push(
+        <span key={`${key}-${parts.length}`} style={currentColor ? { color: currentColor } : undefined}>
+          {remainingText}
+        </span>
+      );
+    }
+  }
+  
+  // If no ANSI codes were found, return original text
+  if (parts.length === 0) {
+    return text;
+  }
+  
+  return <>{parts}</>;
+}
+
 interface TerminalProps {
   onLogout?: () => void;
 }
@@ -1051,7 +1134,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
         <div className="terminal-output" ref={outputRef}>
         {output.map((line, index) => (
           <div key={index} className="terminal-line">
-            {line}
+            {parseAnsiToReact(line, index)}
           </div>
         ))}
         {!isProcessing && (
