@@ -37,7 +37,7 @@ export async function renderSequence(
 ): Promise<boolean> {
   for (const step of sequence.steps) {
     if (callbacks.isAborted()) {
-      callbacks.onOutput('\x1b[33m^C\x1b[0m');
+      callbacks.onOutput('{{c:33}}^C{{c:0}}');
       return false;
     }
     

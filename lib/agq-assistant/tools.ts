@@ -223,25 +223,25 @@ export const SPINNERS = {
  */
 export const COLORS = {
   normal: '',
-  success: '\x1b[32m',    // Green
-  error: '\x1b[31m',      // Red
-  warning: '\x1b[33m',    // Yellow
-  info: '\x1b[36m',       // Cyan
-  dim: '\x1b[90m',        // Gray
-  highlight: '\x1b[97m',  // Bright white
-  quantum: '\x1b[35m',    // Magenta/Purple
-  reset: '\x1b[0m',
+  success: '{{c:32}}',    // Green
+  error: '{{c:31}}',      // Red
+  warning: '{{c:33}}',    // Yellow
+  info: '{{c:36}}',       // Cyan
+  dim: '{{c:90}}',        // Gray
+  highlight: '{{c:97}}',  // Bright white
+  quantum: '{{c:35}}',    // Magenta/Purple
+  reset: '{{c:0}}',
 };
 
 /**
  * Status prefixes
  */
 export const STATUS_PREFIXES = {
-  ok: '\x1b[32m[  OK  ]\x1b[0m',
-  fail: '\x1b[31m[ FAIL ]\x1b[0m',
-  warn: '\x1b[33m[ WARN ]\x1b[0m',
-  info: '\x1b[36m[ INFO ]\x1b[0m',
-  skip: '\x1b[90m[ SKIP ]\x1b[0m',
-  done: '\x1b[32m[ DONE ]\x1b[0m',
+  ok: '{{c:32}}[  OK  ]{{c:0}}',
+  fail: '{{c:31}}[ FAIL ]{{c:0}}',
+  warn: '{{c:33}}[ WARN ]{{c:0}}',
+  info: '{{c:36}}[ INFO ]{{c:0}}',
+  skip: '{{c:90}}[ SKIP ]{{c:0}}',
+  done: '{{c:32}}[ DONE ]{{c:0}}',
 };
 
