@@ -6,19 +6,48 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as piexif from 'piexifjs';
 
 /**
- * LoSciFi Archive style prompt template
+ * Diverse archival style prompt template
  */
 function buildScanPrompt(target: string, classification: string = 'CLASSIFIED', timestamp?: string): string {
   const year = timestamp ? new Date(timestamp).getFullYear() : '1978';
   
-  return `Archival photograph from classified quantum research facility, ${year}.
-Lo-fi sci-fi aesthetic, grain texture, limited color palette (cyan/amber/grayscale).
-Scanner overlay with hex codes and timestamps.
-Marked: ${classification} - ${target}
-Atmospheric, mysterious, slightly distorted from dimensional transfer.
-Black and white or sepia tone, vintage film grain, archival document aesthetic.
-Technical scanner interface elements visible, quantum interference patterns.
-Classified government archive style, cold war era scientific photography.`;
+  // Random style selection for variety
+  const styles = [
+    // Vintage scientific photography
+    `Vintage scientific photograph from classified research facility, ${year}. Black and white, high contrast, film grain, archival document aesthetic. Technical equipment visible, laboratory setting. Marked: ${classification} - ${target}. Atmospheric, mysterious, slightly distorted from dimensional transfer.`,
+    
+    // Infrared/thermal scan
+    `Thermal scan image from quantum research archive, ${year}. Infrared color palette (reds, oranges, yellows), digital scan aesthetic, technical overlay with hex codes. Marked: ${classification} - ${target}. Dimensional interference visible as color anomalies.`,
+    
+    // Satellite/reconnaissance photo
+    `Aerial reconnaissance photograph, ${year}. High altitude perspective, grayscale with slight color tint, military archive style. Grid overlay, coordinates visible. Marked: ${classification} - ${target}. Atmospheric distortion from temporal transfer.`,
+    
+    // Microscope/scientific documentation
+    `Scientific documentation photograph, ${year}. Close-up detail, laboratory lighting, technical precision. Black and white or sepia, archival quality. Marked: ${classification} - ${target}. Quantum interference patterns visible.`,
+    
+    // Security camera footage
+    `Security camera still frame, ${year}. Low resolution, timestamp overlay, surveillance aesthetic. Grayscale or muted colors, CCTV quality. Marked: ${classification} - ${target}. Temporal anomalies visible in frame.`,
+    
+    // Hand-drawn technical diagram
+    `Technical diagram from classified archive, ${year}. Hand-drawn or blueprint style, technical annotations, aged paper texture. Sepia or blueprint tones. Marked: ${classification} - ${target}. Dimensional transfer artifacts.`,
+    
+    // X-ray/scanning image
+    `Scanning image from quantum research, ${year}. X-ray or CT scan aesthetic, inverted colors or grayscale, technical overlay. Marked: ${classification} - ${target}. Dimensional interference visible.`,
+    
+    // Field documentation
+    `Field documentation photograph, ${year}. Outdoor or industrial setting, documentary style, natural lighting. Aged photo aesthetic, film grain. Marked: ${classification} - ${target}. Temporal transfer distortion.`,
+    
+    // Laboratory evidence photo
+    `Evidence photograph from research archive, ${year}. Forensic documentation style, neutral background, precise lighting. Black and white, archival quality. Marked: ${classification} - ${target}. Quantum signature visible.`,
+    
+    // Abstract quantum visualization
+    `Quantum visualization from temporal research, ${year}. Abstract patterns, energy signatures, digital art aesthetic. Cyan/amber color palette, technical overlay. Marked: ${classification} - ${target}. Dimensional interference patterns.`,
+  ];
+  
+  const selectedStyle = styles[Math.floor(Math.random() * styles.length)];
+  
+  // Add common elements
+  return `${selectedStyle} Scanner overlay with hex codes and timestamps. Vintage film grain or digital artifacts. Classified government archive style. Atmospheric, mysterious, slightly distorted from dimensional transfer.`;
 }
 
 /**
