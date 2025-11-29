@@ -16,6 +16,7 @@ import {
   TreeStep,
   TreeNode,
   CodeStep,
+  QuantumStreamStep,
   SPINNERS,
   COLORS,
   STATUS_PREFIXES,
@@ -26,6 +27,7 @@ export interface RenderCallbacks {
   onUpdateLastLine: (line: string) => void;
   onClearLastLines: (count: number) => void;
   isAborted: () => boolean;
+  onQuantumStream?: (action: string, value?: number) => void;
 }
 
 /**
@@ -89,6 +91,9 @@ async function renderStep(
       break;
     case 'clear-line':
       callbacks.onClearLastLines(step.count || 1);
+      break;
+    case 'quantum-stream':
+      await renderQuantumStream(step, callbacks);
       break;
   }
 }
@@ -552,6 +557,39 @@ async function renderCode(
 }
 
 /**
+ * Render quantum stream control
+ */
+async function renderQuantumStream(
+  step: QuantumStreamStep,
+  callbacks: RenderCallbacks
+): Promise<void> {
+  const { action, value, message } = step;
+  
+  // Call the video control callback if available
+  if (callbacks.onQuantumStream) {
+    callbacks.onQuantumStream(action, value);
+  }
+  
+  // Display message if provided
+  if (message) {
+    callbacks.onOutput(`${COLORS.quantum}[QuantumStream]${COLORS.reset} ${message}`);
+  } else {
+    // Default messages for actions
+    const actionMessages: { [key: string]: string } = {
+      'play': 'Stream activated',
+      'pause': 'Stream paused',
+      'stop': 'Stream terminated',
+      'mute': 'Audio channel muted',
+      'unmute': 'Audio channel restored',
+      'seek': `Temporal position: ${value}s`,
+      'volume': `Audio level: ${value}%`,
+      'status': 'Checking stream status...',
+    };
+    callbacks.onOutput(`${COLORS.quantum}[QuantumStream]${COLORS.reset} ${actionMessages[action] || action}`);
+  }
+}
+
+/**
  * Sleep helper
  */
 function sleep(ms: number): Promise<void> {
@@ -563,7 +601,8 @@ function sleep(ms: number): Promise<void> {
  */
 export function createTerminalCallbacks(
   setOutput: React.Dispatch<React.SetStateAction<string[]>>,
-  abortSignal: { aborted: boolean }
+  abortSignal: { aborted: boolean },
+  onQuantumStream?: (action: string, value?: number) => void
 ): RenderCallbacks {
   return {
     onOutput: (line: string) => {
@@ -584,6 +623,7 @@ export function createTerminalCallbacks(
       setOutput(prev => prev.slice(0, -count));
     },
     isAborted: () => abortSignal.aborted,
+    onQuantumStream,
   };
 }
 

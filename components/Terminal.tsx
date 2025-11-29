@@ -201,6 +201,43 @@ export default function Terminal({ onLogout }: TerminalProps) {
     }
   }, [isProcessing]);
 
+  // Quantum Stream (video) control handler for AGQ
+  const handleQuantumStream = useCallback((action: string, value?: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    switch (action) {
+      case 'play':
+        video.play().catch(() => {});
+        break;
+      case 'pause':
+        video.pause();
+        break;
+      case 'stop':
+        video.pause();
+        video.currentTime = 0;
+        break;
+      case 'seek':
+        if (value !== undefined) {
+          video.currentTime = value;
+        }
+        break;
+      case 'volume':
+        if (value !== undefined) {
+          video.volume = Math.max(0, Math.min(1, value / 100));
+        }
+        break;
+      case 'mute':
+        video.muted = true;
+        setIsMuted(true);
+        break;
+      case 'unmute':
+        video.muted = false;
+        setIsMuted(false);
+        break;
+    }
+  }, []);
+
   const executeCommand = useCallback(async (cmd: string) => {
     if (!cmd.trim()) {
       return;
@@ -263,7 +300,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
       const context = getAGQContext();
       const welcomeSeq = generateWelcomeSequence(context.initiationLevel);
       
-      const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current);
+      const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current, handleQuantumStream);
       abortSignalRef.current.aborted = false;
       
       (async () => {
@@ -282,7 +319,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
       // Handle exit commands
       if (message === 'exit' || message === 'quit' || message === 'bye') {
         const exitSeq = generateExitSequence();
-        const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current);
+        const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current, handleQuantumStream);
         abortSignalRef.current.aborted = false;
         
         (async () => {
@@ -352,7 +389,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
           const data = await response.json();
           
           if (data.sequence) {
-            const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current);
+            const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current, handleQuantumStream);
             abortSignalRef.current.aborted = false;
             await renderSequence(data.sequence, callbacks);
             
@@ -881,7 +918,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
           if (newCount >= 3 && !agqPromptShown) {
             setAgqPromptShown(true);
             const promptSeq = generateActivationPrompt(newCount);
-            const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current);
+            const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current, handleQuantumStream);
             abortSignalRef.current.aborted = false;
             await renderSequence(promptSeq, callbacks);
           }
@@ -896,7 +933,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
         if (newCount >= 3 && !agqPromptShown) {
           setAgqPromptShown(true);
           const promptSeq = generateActivationPrompt(newCount);
-          const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current);
+          const callbacks = createTerminalCallbacks(setOutput, abortSignalRef.current, handleQuantumStream);
           abortSignalRef.current.aborted = false;
           await renderSequence(promptSeq, callbacks);
         }
@@ -904,7 +941,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
     }
 
     setIsProcessing(false);
-  }, [onLogout, activeAgent, currentDir, censor, brightness, agqPromptShown, agqMode]);
+  }, [onLogout, activeAgent, currentDir, censor, brightness, agqPromptShown, agqMode, handleQuantumStream]);
 
   const startVideo = useCallback(() => {
     const video = videoRef.current;

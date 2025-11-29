@@ -18,6 +18,7 @@ export type ToolType =
   | 'status'        // Status line [OK], [FAIL], [WARN]
   | 'tree'          // Tree structure display
   | 'code'          // Code block with syntax hints
+  | 'quantum-stream' // Control video stream (play, pause, seek, volume)
 
 /**
  * Progress bar styles
@@ -145,6 +146,13 @@ export interface CodeStep {
   highlight?: number[];    // Line numbers to highlight
 }
 
+export interface QuantumStreamStep {
+  tool: 'quantum-stream';
+  action: 'play' | 'pause' | 'stop' | 'seek' | 'volume' | 'mute' | 'unmute' | 'status';
+  value?: number;          // For seek (seconds) or volume (0-100)
+  message?: string;        // Optional message to display
+}
+
 /**
  * Union type of all step types
  */
@@ -161,7 +169,8 @@ export type AGQStep =
   | AsciiArtStep
   | StatusStep
   | TreeStep
-  | CodeStep;
+  | CodeStep
+  | QuantumStreamStep;
 
 /**
  * A sequence of steps to execute
