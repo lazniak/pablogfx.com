@@ -567,7 +567,7 @@ export default function MidnightCommander({ onExit }: MCProps) {
           height: 100vh;
           background: #000080;
           color: #00ffff;
-          font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+          font-family: 'Fira Code', 'Source Code Pro', 'Consolas', monospace;
           font-size: 13px;
           display: flex;
           flex-direction: column;

@@ -106,7 +106,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
       '',
       `[mostek czasowy] Last login: ${lastLogin} from ${lastLoginIP}`,
       '',
-      '\x1b[35m[AGQ-16.7.9v]\x1b[0m Quantum Agent available. Type \x1b[36m"agq"\x1b[0m for full system access.',
+      '[AGQ-16.7.9v] Quantum Agent available. Type "agq" for full system access.',
       '',
     ];
     
@@ -1139,7 +1139,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
           width: 100%;
           height: 100%;
           color: #ffffff;
-          font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+          font-family: 'Fira Code', 'Source Code Pro', 'Consolas', monospace;
           font-size: 14px;
           display: flex;
           flex-direction: column;
@@ -1196,7 +1196,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
           background: transparent;
           border: none;
           color: #ffffff;
-          font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+          font-family: 'Fira Code', 'Source Code Pro', 'Consolas', monospace;
           font-size: 14px;
           outline: none;
           min-width: 0;
