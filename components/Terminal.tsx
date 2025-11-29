@@ -104,8 +104,9 @@ export default function Terminal({ onLogout }: TerminalProps) {
       "New release '25.10' available.",
       "Run 'do-release-upgrade' to upgrade to it.",
       '',
-      '',
       `[mostek czasowy] Last login: ${lastLogin} from ${lastLoginIP}`,
+      '',
+      '\x1b[35m[AGQ-16.7.9v]\x1b[0m Quantum Agent available. Type \x1b[36m"agq"\x1b[0m for full system access.',
       '',
     ];
     
@@ -898,8 +899,6 @@ export default function Terminal({ onLogout }: TerminalProps) {
   }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    startVideo(); // Start video on any key press
-    
     // CTRL+C - Abort current sequence/process
     if (e.ctrlKey && e.key === 'c') {
       e.preventDefault();
@@ -979,7 +978,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
         setInput('');
       }
     }
-  }, [input, historyIndex, executeCommand, startVideo, getCompletions, agqMode, isProcessing]);
+  }, [input, historyIndex, executeCommand, getCompletions, agqMode, isProcessing]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
@@ -1002,16 +1001,9 @@ export default function Terminal({ onLogout }: TerminalProps) {
   useEffect(() => {
     const video = videoRef.current;
     
-    // Set default volume
+    // Set default volume but don't auto-play
     if (video) {
       video.volume = 0.25;
-    }
-
-    // Try to play immediately
-    if (video) {
-      video.play().catch(() => {
-        // Auto-play blocked, will start on first interaction
-      });
     }
   }, []);
 
@@ -1080,13 +1072,10 @@ export default function Terminal({ onLogout }: TerminalProps) {
               value={input}
               onChange={(e) => {
                 setInput(e.target.value);
-                startVideo(); // Start video on input change
               }}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               onContextMenu={handleContextMenu}
-              onClick={() => startVideo()} // Start video on click
-              onFocus={() => startVideo()} // Start video on focus
               autoFocus
               disabled={isProcessing}
             />
