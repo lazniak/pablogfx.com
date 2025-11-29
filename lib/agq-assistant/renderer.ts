@@ -17,6 +17,7 @@ import {
   TreeNode,
   CodeStep,
   QuantumStreamStep,
+  QuantumScanStep,
   SPINNERS,
   COLORS,
   STATUS_PREFIXES,
@@ -94,6 +95,9 @@ async function renderStep(
       break;
     case 'quantum-stream':
       await renderQuantumStream(step, callbacks);
+      break;
+    case 'quantum-scan':
+      await renderQuantumScan(step, callbacks);
       break;
   }
 }
@@ -586,6 +590,89 @@ async function renderQuantumStream(
       'status': 'Checking stream status...',
     };
     callbacks.onOutput(`${COLORS.quantum}[QuantumStream]${COLORS.reset} ${actionMessages[action] || action}`);
+  }
+}
+
+/**
+ * Render quantum scan - dimensional viewport
+ */
+async function renderQuantumScan(
+  step: QuantumScanStep,
+  callbacks: RenderCallbacks
+): Promise<void> {
+  const { target, dimension, classification = 'CLASSIFIED', timestamp } = step;
+  
+  // Show scanning sequence
+  callbacks.onOutput(`${COLORS.quantum}[AGQ-16.7.9v]${COLORS.reset} Inicjalizacja skanera kwantowego...`);
+  callbacks.onOutput('');
+  
+  // Progress animation
+  const progressSteps = [
+    'Kalibracja viewport\'u temporalnego...',
+    'Synchronizacja z wymiarami równoległymi...',
+    'Filtrowanie interferencji kwantowej...',
+    'Ekstrakcja obrazu z archiwum...',
+  ];
+  
+  for (const progressText of progressSteps) {
+    if (callbacks.isAborted()) return;
+    
+    callbacks.onOutput('');
+    const spinnerFrames = SPINNERS.quantum;
+    let i = 0;
+    const duration = 800;
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < duration) {
+      if (callbacks.isAborted()) return;
+      const spinner = spinnerFrames[i % spinnerFrames.length];
+      callbacks.onUpdateLastLine(`${COLORS.info}${spinner}${COLORS.reset} ${progressText}`);
+      await sleep(100);
+      i++;
+    }
+    
+    callbacks.onUpdateLastLine(`${COLORS.success}✓${COLORS.reset} ${progressText}`);
+  }
+  
+  // Call API to generate scan
+  try {
+    const response = await fetch('/api/agq-scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        target,
+        dimension,
+        classification,
+        timestamp,
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Scan failed');
+    }
+    
+    const data = await response.json();
+    
+    // Display metadata
+    callbacks.onOutput('');
+    callbacks.onOutput(`${COLORS.dim}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLORS.reset}`);
+    callbacks.onOutput(`${COLORS.highlight}QUANTUM SCAN RESULT${COLORS.reset}`);
+    callbacks.onOutput(`${COLORS.dim}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLORS.reset}`);
+    callbacks.onOutput(`${COLORS.info}Classification:${COLORS.reset} ${data.metadata.classification}`);
+    callbacks.onOutput(`${COLORS.info}Date:${COLORS.reset} ${data.metadata.dateCreated} (${data.metadata.year})`);
+    callbacks.onOutput(`${COLORS.info}Dimension:${COLORS.reset} ${data.metadata.dimension}`);
+    callbacks.onOutput(`${COLORS.info}Hex Code:${COLORS.reset} ${data.metadata.hexCode}`);
+    callbacks.onOutput(`${COLORS.info}Source:${COLORS.reset} ${data.metadata.source}`);
+    callbacks.onOutput('');
+    
+    // Display image (as data URL - Terminal will render it)
+    const imageUrl = `data:${data.mimeType};base64,${data.image}`;
+    callbacks.onOutput(imageUrl); // Direct image URL for Terminal to render
+    callbacks.onOutput(`${COLORS.dim}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${COLORS.reset}`);
+    callbacks.onOutput(`${COLORS.warning}Uwaga: Obraz może być zniekształcony przez interferencję wymiarową.${COLORS.reset}`);
+    
+  } catch (error: any) {
+    callbacks.onOutput(`${COLORS.error}[FAIL]${COLORS.reset} Skan nieudany: ${error.message}`);
   }
 }
 

@@ -1161,11 +1161,33 @@ export default function Terminal({ onLogout }: TerminalProps) {
       />
       <div className="terminal-container" onClick={() => inputRef.current?.focus()}>
         <div className="terminal-output" ref={outputRef}>
-        {output.map((line, index) => (
-          <div key={index} className="terminal-line">
-            {parseAnsiToReact(line, index)}
-          </div>
-        ))}
+        {output.map((line, index) => {
+          // Check if line is an image data URL
+          if (line.startsWith('data:image/')) {
+            return (
+              <div key={index} className="terminal-line terminal-image-container">
+                <img 
+                  src={line} 
+                  alt="Quantum scan result" 
+                  className="terminal-scan-image"
+                  style={{
+                    maxWidth: '100%',
+                    height: 'auto',
+                    border: '1px solid #00ffff',
+                    margin: '10px 0',
+                    display: 'block',
+                  }}
+                />
+              </div>
+            );
+          }
+          
+          return (
+            <div key={index} className="terminal-line">
+              {parseAnsiToReact(line, index)}
+            </div>
+          );
+        })}
         {!isProcessing && (
           <div className="terminal-input-line">
             <span className="terminal-prompt">

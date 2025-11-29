@@ -60,6 +60,7 @@ Available tools:
 - "tree": {data: {name: string, children?: [...]}}
 - "code": {content: string, highlight?: number[]}
 - "quantum-stream": {action: "play"|"pause"|"stop"|"seek"|"volume"|"mute"|"unmute"|"status", value?: number, message?: string}
+- "quantum-scan": {target: string, dimension?: string, classification?: "CLASSIFIED"|"RESTRICTED"|"TOP SECRET", timestamp?: string}
 
 INITIATION LEVELS (0-100) - affects what classified info you reveal:
 - 0-20: Basic access, standard operations

@@ -19,6 +19,7 @@ export type ToolType =
   | 'tree'          // Tree structure display
   | 'code'          // Code block with syntax hints
   | 'quantum-stream' // Control video stream (play, pause, seek, volume)
+  | 'quantum-scan'  // Quantum scanner - viewport to other dimensions
 
 /**
  * Progress bar styles
@@ -153,6 +154,14 @@ export interface QuantumStreamStep {
   message?: string;        // Optional message to display
 }
 
+export interface QuantumScanStep {
+  tool: 'quantum-scan';
+  target: string;          // What to scan
+  dimension?: string;      // Which dimension
+  classification?: string; // CLASSIFIED, RESTRICTED, etc.
+  timestamp?: string;     // Artifact date (e.g., "1978-03-16", "2049-04-16")
+}
+
 /**
  * Union type of all step types
  */
@@ -170,7 +179,8 @@ export type AGQStep =
   | StatusStep
   | TreeStep
   | CodeStep
-  | QuantumStreamStep;
+  | QuantumStreamStep
+  | QuantumScanStep;
 
 /**
  * A sequence of steps to execute
