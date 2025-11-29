@@ -311,8 +311,8 @@ export default function LoginPage() {
           height: 100vh;
           background: #0a0a0a;
           color: #00ff00;
-          font-family: 'VT323', 'Courier New', monospace;
-          font-size: 18px;
+          font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+          font-size: 14px;
           display: flex;
           flex-direction: column;
           overflow: hidden;

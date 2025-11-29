@@ -1150,8 +1150,8 @@ export default function Terminal({ onLogout }: TerminalProps) {
           width: 100%;
           height: 100%;
           color: #ffffff;
-          font-family: 'VT323', monospace;
-          font-size: 28px;
+          font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+          font-size: 14px;
           display: flex;
           flex-direction: column;
           overflow: hidden;
@@ -1160,7 +1160,7 @@ export default function Terminal({ onLogout }: TerminalProps) {
         
         @media (max-width: 768px) {
           .terminal-container {
-            font-size: 10px;
+            font-size: 12px;
           }
         }
         
@@ -1207,15 +1207,15 @@ export default function Terminal({ onLogout }: TerminalProps) {
           background: transparent;
           border: none;
           color: #ffffff;
-          font-family: 'VT323', monospace;
-          font-size: 28px;
+          font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+          font-size: 14px;
           outline: none;
           min-width: 0;
         }
         
         @media (max-width: 768px) {
           .terminal-input {
-            font-size: 10px;
+            font-size: 12px;
           }
         }
         
