@@ -633,14 +633,17 @@ async function renderQuantumScan(
     callbacks.onUpdateLastLine(`${COLORS.success}✓${COLORS.reset} ${progressText}`);
   }
   
-  // Animated extraction phase
+  // Animated extraction phase - measure actual API time
   callbacks.onOutput('');
   const extractionSpinner = SPINNERS.quantum;
   let extractionIdx = 0;
   const extractionStartTime = Date.now();
-  const extractionDuration = 2000; // 2 seconds of animation
   
-  // Start API call in parallel
+  // Start API call and measure time
+  let responseData: any = null;
+  let responseError: any = null;
+  let responseReceived = false;
+  
   const scanPromise = fetch('/api/agq-scan', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -650,14 +653,42 @@ async function renderQuantumScan(
       classification,
       timestamp,
     }),
+  }).then(async (res) => {
+    if (!res.ok) throw new Error('Scan failed');
+    return await res.json();
   });
   
-  // Animate extraction while waiting
-  while (Date.now() - extractionStartTime < extractionDuration) {
+  // Wait for response in background
+  scanPromise
+    .then((data) => {
+      responseData = data;
+      responseReceived = true;
+    })
+    .catch((err) => {
+      responseError = err;
+      responseReceived = true;
+    });
+  
+  // Animate until response arrives (with minimum duration)
+  const minDuration = 1500; // Minimum 1.5s animation
+  while (!responseReceived || (Date.now() - extractionStartTime < minDuration)) {
     if (callbacks.isAborted()) return;
+    
+    const elapsed = Date.now() - extractionStartTime;
     const spinner = extractionSpinner[extractionIdx % extractionSpinner.length];
-    const progress = Math.min((Date.now() - extractionStartTime) / extractionDuration, 1);
-    const percent = Math.round(progress * 100);
+    
+    // Calculate progress - if response received, go to 100%, otherwise estimate
+    let progress: number;
+    if (responseReceived && elapsed >= minDuration) {
+      progress = 1;
+    } else if (responseReceived) {
+      // Response received but min duration not met - interpolate
+      progress = Math.min(0.99, elapsed / minDuration);
+    } else {
+      // Estimate based on elapsed time (assume max 10 seconds)
+      progress = Math.min(0.99, elapsed / 10000);
+    }
+    const percent = Math.min(99, Math.round(progress * 100));
     
     // Show progress with scanning effect
     const scanChars = ['█', '▓', '▒', '░'];
@@ -672,15 +703,22 @@ async function renderQuantumScan(
     extractionIdx++;
   }
   
-  // Wait for API response
+  // Final 100% update
+  const scanBar = '█'.repeat(20);
+  callbacks.onUpdateLastLine(`${COLORS.info}${extractionSpinner[extractionIdx % extractionSpinner.length]}${COLORS.reset} Ekstrakcja obrazu z archiwum... [${scanBar}] 100%`);
+  await sleep(200);
+  
+  // Process response
   try {
-    const response = await scanPromise;
-    
-    if (!response.ok) {
-      throw new Error('Scan failed');
+    if (responseError) {
+      throw responseError;
     }
     
-    const data = await response.json();
+    if (!responseData) {
+      throw new Error('No data received');
+    }
+    
+    const data = responseData;
     
     // Display metadata
     callbacks.onUpdateLastLine(`${COLORS.success}✓${COLORS.reset} Ekstrakcja obrazu z archiwum...`);

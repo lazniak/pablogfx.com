@@ -40,27 +40,27 @@ function QuantumScanImage({ imageUrl }: { imageUrl: string }) {
   const [loaded, setLoaded] = useState(false);
   
   useEffect(() => {
-    // Progressive reveal animation
+    // Progressive reveal animation - slower
     const revealInterval = setInterval(() => {
       setRevealProgress(prev => {
         if (prev >= 100) {
           clearInterval(revealInterval);
           return 100;
         }
-        return prev + 2;
+        return prev + 0.5; // Slower: 0.5% per frame instead of 2%
       });
-    }, 30);
+    }, 50); // Slower: 50ms instead of 30ms
     
-    // Noise fade out after image loads
+    // Noise fade out after image loads - slower
     const noiseInterval = setInterval(() => {
       setNoiseOpacity(prev => {
         if (prev <= 0) {
           clearInterval(noiseInterval);
           return 0;
         }
-        return Math.max(0, prev - 0.05);
+        return Math.max(0, prev - 0.02); // Slower fade
       });
-    }, 100);
+    }, 150); // Slower: 150ms instead of 100ms
     
     return () => {
       clearInterval(revealInterval);
